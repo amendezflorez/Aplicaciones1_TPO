@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Ronda-Aplicacion</string>
+<!-- Login -->
+    <string name="login_title">Iniciar sesión</string>
+    <string name="login_username_hint">Usuario o email</string>
+    <string name="login_password_hint">Contraseña</string>
+    <string name="login_button">Ingresar</string>
+    <string name="login_with_otp_link">Ingresar con código por email</string>
+    <string name="login_error_empty_fields">Completá usuario y contraseña</string>
+    <string name="login_error_generic">No pudimos iniciar sesión. Intentá de nuevo.</string>
+
+    <!-- Email / OTP request -->
+    <string name="email_auth_title">Ingresar con email</string>
+    <string name="email_auth_subtitle">Te enviamos un código de 6 dígitos para verificar tu cuenta</string>
+    <string name="email_hint">Email</string>
+    <string name="send_code_button">Enviar código</string>
+    <string name="email_error_invalid">Ingresá un email válido</string>
+    <string name="email_error_generic">No pudimos enviar el código. Intentá de nuevo.</string>
+
+    <!-- OTP verification -->
+    <string name="otp_title">Verificá tu código</string>
+    <string name="otp_subtitle">Ingresá el código que enviamos a %1$s</string>
+    <string name="otp_hint">Código de 6 dígitos</string>
+    <string name="otp_verify_button">Verificar</string>
+    <string name="otp_resend_button">Reenviar código</string>
+    <string name="otp_resend_timer">Reenviar en %1$ds</string>
+    <string name="otp_error_invalid">El código debe tener 6 dígitos</string>
+    <string name="otp_error_generic">Código incorrecto o expirado</string>
+    <string name="otp_resend_success">Código reenviado</string>
+
+    <!-- Home -->
+    <string name="home_welcome">¡Bienvenido, %1$s!</string>
+    <string name="home_logout">Cerrar sesión</string>
+</resources>
