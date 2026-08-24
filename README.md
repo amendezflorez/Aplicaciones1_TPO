@@ -1,22 +1,30 @@
-**Esta rama cubre el punto 1 del TP: Autenticación y Registro de Usuarios.**
+# Ronda - App Android (feature_1)
 
-**Implementado:**
+Esta rama cubre el punto 1 del TP: Autenticación y Registro de Usuarios.
+
+## Implementado
+
 - Login con usuario y contraseña.
-- Login alternativo por mail + codigo OTP (con reenvio y cooldown de 60s).
-- Navegacion con Fragments + Navigation Component.
-- Sesion persistida en SharedPreferences (Session Manager).
-- Capa de red con Retrofit (data/network)
+- Login alternativo por mail + código OTP (con reenvío y cooldown de 60s).
+- Navegación con Fragments + Navigation Component.
+- Sesión persistida en SharedPreferences (SessionManager).
+- Capa de red con Retrofit (data/network).
 
-**Backend:**
-Falta conexion al backend, por lo que las pantallas de Login y OTP nunca reciben respuesta exitosa del servidor -> no se puede ir de Login a Home (cualquier cosa agregar boton SKIP).
-Los endpoints en ApiService.java: 
-- auth/login
-- auth/otp/request
-- auth/otp/verify
-- auth/otp/resend
-son una propuesta para simular las llamadas.
+## Backend
 
-Cuando este disponible el back, ajustar: 
-- BASE_URL en RetrofitClient.java.
-- Paths de los endpoints en ApiService.java.
-- Nombres de campos JSON en data/model/ si no coinciden con el real.
+Ya hay un backend funcional para este punto (Login + OTP), en la rama `db` del
+repo (Node + Express + SQLite). Instrucciones para correrlo en el README de esa rama.
+
+Los endpoints en `ApiService.java`:
+- `auth/login`
+- `auth/otp/request`
+- `auth/otp/verify`
+- `auth/otp/resend`
+
+ya están conectados a ese backend de prueba. A medida que se sumen los demás puntos
+del TP (Home, publicaciones, etc.), hay que ir agregando los endpoints correspondientes
+en el backend (rama `db`) y actualizando `ApiService.java` acá.
+
+Nota: `BASE_URL` en `RetrofitClient.java` apunta a `10.0.2.2`, que solo funciona
+desde el emulador. Para probar en un celular real hay que cambiarla por la IP de
+la PC en la red, o por la URL final si el backend se despliega en algún servidor.
