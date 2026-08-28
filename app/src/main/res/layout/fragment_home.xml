@@ -6,12 +6,27 @@
     android:orientation="vertical"
     android:padding="8dp">
 
-    <!-- Buscador por texto libre -->
-    <androidx.appcompat.widget.SearchView
-        android:id="@+id/searchView"
+    <!-- Buscador + Botón de Filtros -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:queryHint="Buscar productos..." />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <androidx.appcompat.widget.SearchView
+            android:id="@+id/searchView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:queryHint="Buscar productos..." />
+
+        <Button
+            android:id="@+id/btnFilter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Filtros"
+            android:layout_marginStart="4dp" />
+    </LinearLayout>
 
     <!-- Selector de Ordenamiento -->
     <LinearLayout

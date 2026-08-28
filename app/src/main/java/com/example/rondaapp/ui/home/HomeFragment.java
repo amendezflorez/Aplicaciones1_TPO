@@ -1,11 +1,14 @@
 package com.example.rondaapp.ui.home;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -27,9 +30,16 @@ public class HomeFragment extends Fragment {
     private PublicationAdapter adapter;
     private SearchView searchView;
     private Spinner spinnerSort;
+    private Button btnFilter;
 
+    // Estados de búsqueda y filtros
     private String currentSearch = null;
     private String currentSort = "recent";
+    private String selectedCategory = null;
+    private String selectedCondition = null;
+    private String selectedZone = null;
+    private Double selectedMinPrice = null;
+    private Double selectedMaxPrice = null;
 
     @Nullable
     @Override
@@ -44,19 +54,17 @@ public class HomeFragment extends Fragment {
         rvPublications = view.findViewById(R.id.rvPublications);
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
+        btnFilter = view.findViewById(R.id.btnFilter);
 
-        // Configurar RecyclerView
         adapter = new PublicationAdapter();
         rvPublications.setLayoutManager(new LinearLayoutManager(getContext()));
         rvPublications.setAdapter(adapter);
 
-        // Configurar Spinner de Ordenamiento
         setupSortSpinner();
-
-        // Configurar Buscador de texto
         setupSearchView();
 
-        // Carga inicial de publicaciones
+        btnFilter.setOnClickListener(v -> showFiltersDialog());
+
         fetchPublications();
     }
 
@@ -100,9 +108,76 @@ public class HomeFragment extends Fragment {
         });
     }
 
+    private void showFiltersDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_filters, null);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+
+        Spinner spCategory = dialogView.findViewById(R.id.spinnerCategory);
+        Spinner spCondition = dialogView.findViewById(R.id.spinnerCondition);
+        EditText etZone = dialogView.findViewById(R.id.etZone);
+        EditText etMinPrice = dialogView.findViewById(R.id.etMinPrice);
+        EditText etMaxPrice = dialogView.findViewById(R.id.etMaxPrice);
+        Button btnApply = dialogView.findViewById(R.id.btnApplyFilters);
+        Button btnClear = dialogView.findViewById(R.id.btnClearFilters);
+
+        // Spinners del Diálogo
+        String[] categories = {"Todas", "Deportes", "Tecnología", "Hogar", "Indumentaria"};
+        String[] conditions = {"Todos", "nuevo", "como nuevo", "usado"};
+
+        spCategory.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, categories));
+        spCondition.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, conditions));
+
+        // Precargar valores actuales si existen
+        if (selectedZone != null) etZone.setText(selectedZone);
+        if (selectedMinPrice != null) etMinPrice.setText(String.valueOf(selectedMinPrice));
+        if (selectedMaxPrice != null) etMaxPrice.setText(String.valueOf(selectedMaxPrice));
+
+        btnApply.setOnClickListener(v -> {
+            String cat = spCategory.getSelectedItem().toString();
+            selectedCategory = cat.equals("Todas") ? null : cat;
+
+            String cond = spCondition.getSelectedItem().toString();
+            selectedCondition = cond.equals("Todos") ? null : cond;
+
+            String zone = etZone.getText().toString().trim();
+            selectedZone = zone.isEmpty() ? null : zone;
+
+            String minP = etMinPrice.getText().toString().trim();
+            selectedMinPrice = minP.isEmpty() ? null : Double.parseDouble(minP);
+
+            String maxP = etMaxPrice.getText().toString().trim();
+            selectedMaxPrice = maxP.isEmpty() ? null : Double.parseDouble(maxP);
+
+            fetchPublications();
+            dialog.dismiss();
+        });
+
+        btnClear.setOnClickListener(v -> {
+            selectedCategory = null;
+            selectedCondition = null;
+            selectedZone = null;
+            selectedMinPrice = null;
+            selectedMaxPrice = null;
+            fetchPublications();
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
     private void fetchPublications() {
         RetrofitClient.getApiService().getPublications(
-                currentSearch, null, null, null, null, null, currentSort, 1, 20
+                currentSearch,
+                selectedCategory,
+                selectedCondition,
+                selectedMinPrice,
+                selectedMaxPrice,
+                selectedZone,
+                currentSort,
+                1,
+                20
         ).enqueue(new Callback<PublicationResponse>() {
             @Override
             public void onResponse(Call<PublicationResponse> call, Response<PublicationResponse> response) {
