@@ -1,6 +1,7 @@
 <resources>
-    <string name="app_name">Ronda-Aplicacion</string>
-<!-- Login -->
+    <string name="app_name">RondaApp</string>
+
+    <!-- Login -->
     <string name="login_title">Iniciar sesión</string>
     <string name="login_username_hint">Usuario o email</string>
     <string name="login_password_hint">Contraseña</string>

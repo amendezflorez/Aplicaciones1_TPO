@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Ronda-Aplicacion"
+rootProject.name = "RondaApp"
 include(":app")

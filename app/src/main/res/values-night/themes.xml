@@ -1,7 +1,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.RondaAplicacion" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.RondaApp" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
     </style>
+
+    <style name="Theme.RondaApp" parent="Base.Theme.RondaApp" />
+    <style name="Theme.RondaAplicacion" parent="Theme.RondaApp" />
 </resources>
