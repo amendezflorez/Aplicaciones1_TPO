@@ -32,7 +32,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
- * Pantalla principal del Home con exploración de publicaciones, buscador, filtros, ordenamiento y logout.
+ * Pantalla principal del Home con exploración de publicaciones, buscador, filtros, ordenamiento y cierre de sesión.
  */
 public class HomeFragment extends Fragment {
 
@@ -81,14 +81,7 @@ public class HomeFragment extends Fragment {
         }
 
         if (btnLogout != null) {
-            btnLogout.setOnClickListener(v -> {
-                sessionManager.clear();
-                NavOptions navOptions = new NavOptions.Builder()
-                        .setPopUpTo(R.id.nav_graph, true)
-                        .build();
-                Navigation.findNavController(view)
-                        .navigate(R.id.auth_nav_graph, null, navOptions);
-            });
+            btnLogout.setOnClickListener(v -> showLogoutConfirmationDialog(view, sessionManager));
         }
 
         adapter = new PublicationAdapter();
@@ -101,6 +94,27 @@ public class HomeFragment extends Fragment {
         btnFilter.setOnClickListener(v -> showFiltersDialog());
 
         fetchPublications();
+    }
+
+    private void showLogoutConfirmationDialog(View view, SessionManager sessionManager) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.logout_dialog_title)
+                .setMessage(R.string.logout_dialog_message)
+                .setPositiveButton(R.string.logout_dialog_confirm, (dialog, which) -> {
+                    // 1. Limpiar sesión guardada en SharedPreferences
+                    sessionManager.clear();
+                    Toast.makeText(requireContext(), R.string.logout_success_toast, Toast.LENGTH_SHORT).show();
+
+                    // 2. Limpiar la pila de navegación y volver a la pantalla de Login
+                    NavOptions navOptions = new NavOptions.Builder()
+                            .setPopUpTo(R.id.nav_graph, true)
+                            .build();
+
+                    Navigation.findNavController(view)
+                            .navigate(R.id.auth_nav_graph, null, navOptions);
+                })
+                .setNegativeButton(R.string.logout_dialog_cancel, (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void setupSortSpinner() {
