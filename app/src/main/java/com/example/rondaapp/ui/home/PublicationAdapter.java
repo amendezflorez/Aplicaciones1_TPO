@@ -1,6 +1,5 @@
 package com.example.rondaapp.ui.home;
 
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,7 +17,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     private List<Publication> publications = new ArrayList<>();
 
     public void setPublications(List<Publication> publications) {
-        this.publications = publications;
+        this.publications = (publications != null) ? publications : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -33,10 +32,22 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     @Override
     public void onBindViewHolder(@NonNull PublicationViewHolder holder, int position) {
         Publication pub = publications.get(position);
-        holder.tvTitle.setText(pub.getTitle());
+        holder.tvTitle.setText(pub.getTitle() != null ? pub.getTitle() : "");
         holder.tvPrice.setText(String.format(Locale.getDefault(), "$ %.2f", pub.getPrice()));
-        holder.tvCondition.setText(pub.getCondition().toUpperCase(Locale.getDefault()));
-        holder.tvZone.setText(String.format("📍 %s", pub.getZone()));
+
+        if (pub.getCondition() != null && !pub.getCondition().isEmpty()) {
+            holder.tvCondition.setText(pub.getCondition().toUpperCase(Locale.getDefault()));
+            holder.tvCondition.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvCondition.setVisibility(View.GONE);
+        }
+
+        if (pub.getZone() != null && !pub.getZone().isEmpty()) {
+            holder.tvZone.setText(String.format("📍 %s", pub.getZone()));
+            holder.tvZone.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvZone.setVisibility(View.GONE);
+        }
     }
 
     @Override
