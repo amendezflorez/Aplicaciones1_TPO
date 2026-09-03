@@ -3,15 +3,13 @@ plugins {
 }
 
 android {
-    namespace = "com.ronda.app"
-    compileSdk {
-        version = release(37)
-    }
+    namespace = "com.example.rondaapp"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.ronda.app"
-        minSdk = 24
-        targetSdk = 37
+        applicationId = "com.example.rondaapp"
+        minSdk = 26
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -20,9 +18,11 @@ android {
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -32,16 +32,26 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.constraintlayout)
+
+    // Navigation Component
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+
+    // Red y JSON
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.gson)
+
+    // UI
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.cardview)
+
     testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }

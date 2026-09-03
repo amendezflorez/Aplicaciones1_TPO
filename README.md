@@ -1,30 +1,56 @@
-# Ronda - App Android (feature_1)
+# Ronda - Aplicación Móvil Android & Backend Unificado 🛒📱
 
-Esta rama cubre el punto 1 del TP: Autenticación y Registro de Usuarios.
+Proyecto desarrollado para la materia **Desarrollo de Aplicaciones 1**. Contiene la aplicación nativa para Android (Java) bajo el principio de **Single Activity Architecture** y la **API REST unificada** en Node.js con SQLite.
 
-## Implementado
+---
 
-- Login con usuario y contraseña.
-- Login alternativo por mail + código OTP (con reenvío y cooldown de 60s).
-- Navegación con Fragments + Navigation Component.
-- Sesión persistida en SharedPreferences (SessionManager).
-- Capa de red con Retrofit (data/network).
+## 🚀 Funcionalidades Integradas
 
-## Backend
+1. **Autenticación (Feature 1)**:
+   - Login con usuario y contraseña (creación automática si no existe para pruebas).
+   - Login y registro con código OTP de 6 dígitos enviado por email (simulado en consola).
+   - Reenvío de código con cooldown de 60 segundos.
+   - Sesión persistida con `SessionManager` en `SharedPreferences`.
 
-Ya hay un backend funcional para este punto (Login + OTP), en la rama `db` del
-repo (Node + Express + SQLite). Instrucciones para correrlo en el README de esa rama.
+2. **Explorar Publicaciones / Home (Feature 3)**:
+   - Listado de productos en tarjetas (`CardView` + `RecyclerView`).
+   - Buscador de texto libre en tiempo real (`SearchView`).
+   - Selector de ordenamiento (`Spinner`): Más recientes, Menor precio, Mayor precio.
+   - Diálogo de filtros avanzados (`AlertDialog`): Categoría, Condición (`nuevo`, `como nuevo`, `usado`), Zona geográfica y Rango de precios (`minPrice` / `maxPrice`).
+   - Botón de **Cerrar Sesión** en la barra superior.
 
-Los endpoints en `ApiService.java`:
-- `auth/login`
-- `auth/otp/request`
-- `auth/otp/verify`
-- `auth/otp/resend`
+---
 
-ya están conectados a ese backend de prueba. A medida que se sumen los demás puntos
-del TP (Home, publicaciones, etc.), hay que ir agregando los endpoints correspondientes
-en el backend (rama `db`) y actualizando `ApiService.java` acá.
+## 🛠️ Cómo Iniciar el Backend Unificado
 
-Nota: `BASE_URL` en `RetrofitClient.java` apunta a `10.0.2.2`, que solo funciona
-desde el emulador. Para probar en un celular real hay que cambiarla por la IP de
-la PC en la red, o por la URL final si el backend se despliega en algún servidor.
+1. Abrí tu terminal en la carpeta `backend/`:
+   ```bash
+   cd backend
+   ```
+2. Instalá las dependencias (solo la primera vez):
+   ```bash
+   npm install
+   ```
+3. Iniciá el servidor:
+   ```bash
+   npm start
+   ```
+
+El servidor iniciará en `http://localhost:8080`.
+Desde el **emulador de Android Studio**, la aplicación se comunicará a través de:
+```
+http://10.0.2.2:8080/api/
+```
+
+> **Base de Datos**: Los datos se almacenan en `ronda.db` (SQLite) con publicaciones semilla precargadas automáticamente.
+
+---
+
+## 📱 Estructura Android (Single Activity Architecture)
+
+* **Actividad Principal**: `MainActivity.java` como host único.
+* **Navegación**: `nav_graph.xml` que incluye:
+  * `auth_nav_graph.xml`: `LoginFragment`, `EmailAuthFragment`, `OtpVerificationFragment`.
+  * `home_nav_graph.xml`: `HomeFragment`.
+* **Red**: `RetrofitClient.java` y `ApiService.java` apuntando a `http://10.0.2.2:8080/api/`.
+* **Seguridad**: `android:usesCleartextTraffic="true"` habilitado en `AndroidManifest.xml`.
