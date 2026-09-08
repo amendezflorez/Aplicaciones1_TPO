@@ -50,6 +50,9 @@ public class HomeFragment extends Fragment {
     @Inject
     ApiService apiService;
 
+    @Inject
+    OfflineCache offlineCache;
+
     /** Cantidad de publicaciones que se piden por página. */
     private static final int PAGE_SIZE = 20;
     /** Cuántos ítems antes del final disparan la carga de la página siguiente. */
@@ -69,7 +72,6 @@ public class HomeFragment extends Fragment {
     private ProgressBar progressPaging;
     private SessionManager sessionManager;
     private TextView tvOfflineBanner;
-    private OfflineCache offlineCache;
     private ConnectivityWatcher connectivityWatcher;
     /** Se está mostrando el listado cacheado en vez del del servidor. */
     private boolean mostrandoCache = false;
@@ -101,7 +103,6 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         sessionManager = new SessionManager(requireContext());
-        offlineCache = new OfflineCache(requireContext());
         connectivityWatcher = new ConnectivityWatcher(requireContext());
         String username = getArguments() != null ? getArguments().getString("username", "") : "";
         if (username.isEmpty() && sessionManager.getName() != null) {
@@ -452,11 +453,16 @@ public class HomeFragment extends Fragment {
 
                 // Punto 6: si el servidor no responde vale lo mismo que estar sin
                 // conexión, así que se muestra lo último que se cargó bien.
-                if (reset && offlineCache.hayListado()) {
-                    mostrarDesdeCache(true);
-                } else {
-                    Toast.makeText(getContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+                if (!reset) return;
+                offlineCache.hayListado(hayCache -> {
+                    if (!isAdded() || getView() == null) return;
+                    if (hayCache) {
+                        mostrarDesdeCache(true);
+                    } else {
+                        Toast.makeText(getContext(), "Error de red: " + t.getMessage(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
@@ -472,11 +478,37 @@ public class HomeFragment extends Fragment {
 
         if (!reset) return; // el scroll no puede traer más de lo que hay guardado
 
-        List<Publication> cacheadas = offlineCache.leerListado();
-        adapter.setPublications(cacheadas);
-        hasMore = false;
-        mostrandoCache = true;
-        actualizarBanner();
+        offlineCache.leerListado(filtrosActuales(), cacheadas -> {
+            if (!isAdded() || getView() == null) return;
+            adapter.setPublications(cacheadas);
+            hasMore = false;
+            mostrandoCache = true;
+            actualizarBanner();
+        });
+    }
+
+    /**
+     * Traduce el estado de búsqueda, filtros y orden al mismo formato que se le
+     * manda al backend, para que sin conexión la lista responda igual.
+     */
+    private OfflineCache.Filtros filtrosActuales() {
+        OfflineCache.Filtros filtros = new OfflineCache.Filtros();
+        filtros.busqueda = currentSearch;
+        filtros.categoria = selectedCategory;
+        filtros.condicion = selectedCondition;
+        filtros.minPrice = selectedMinPrice;
+        filtros.maxPrice = selectedMaxPrice;
+        filtros.orden = currentSort;
+
+        // La tabla de barrios linderos vive en el backend, así que sin conexión
+        // la cercanía se resuelve como zona exacta: devuelve menos resultados,
+        // nunca de más.
+        if (selectedNearZone != null) {
+            filtros.zonas = java.util.Collections.singletonList(selectedNearZone);
+        } else if (selectedZone != null) {
+            filtros.zonas = java.util.Collections.singletonList(selectedZone);
+        }
+        return filtros;
     }
 
     private void actualizarBanner() {
@@ -489,14 +521,16 @@ public class HomeFragment extends Fragment {
         }
 
         tvOfflineBanner.setVisibility(View.VISIBLE);
-        tvOfflineBanner.setText(offlineCache.hayListado()
-                ? getString(R.string.offline_banner, antiguedadDelCache())
-                : getString(R.string.offline_banner_no_cache));
+        offlineCache.guardadoEn(guardadoEn -> {
+            if (!isAdded() || getView() == null) return;
+            tvOfflineBanner.setText(guardadoEn > 0
+                    ? getString(R.string.offline_banner, antiguedadDelCache(guardadoEn))
+                    : getString(R.string.offline_banner_no_cache));
+        });
     }
 
     /** "recién", "hace 5 min", "hace 2 h"… para que el aviso diga qué tan viejo es. */
-    private String antiguedadDelCache() {
-        long guardadoEn = offlineCache.guardadoEn();
+    private String antiguedadDelCache(long guardadoEn) {
         if (guardadoEn <= 0) return getString(R.string.offline_just_now);
 
         long minutos = (System.currentTimeMillis() - guardadoEn) / 60000L;

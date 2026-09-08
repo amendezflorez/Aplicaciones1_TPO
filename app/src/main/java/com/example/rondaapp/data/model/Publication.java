@@ -24,6 +24,27 @@ public class Publication {
     @SerializedName("photo_count")
     private int photoCount;
 
+    /** Gson lo usa al deserializar la respuesta de la API. */
+    public Publication() {}
+
+    /** Para reconstruir la publicación desde el caché local (punto 6). */
+    public Publication(int id, String title, String description, double price, String condition,
+                       String category, String zone, String status, String createdAt,
+                       String userId, String sellerName, int photoCount) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.price = price;
+        this.condition = condition;
+        this.category = category;
+        this.zone = zone;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.userId = userId;
+        this.sellerName = sellerName;
+        this.photoCount = photoCount;
+    }
+
     // Getters
     public int getId() { return id; }
     public String getTitle() { return title; }
