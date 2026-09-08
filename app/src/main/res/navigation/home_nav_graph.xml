@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/home_nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <argument
+        android:name="username"
+        app:argType="string"
+        android:defaultValue="" />
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.example.rondaapp.ui.home.HomeFragment"
+        android:label="Explorar Publicaciones"
+        tools:layout="@layout/fragment_home">
+
+        <argument
+            android:name="username"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_home_to_myProfile"
+            app:destination="@id/myProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_detallePublicacion"
+            app:destination="@id/detallePublicacionFragment" />
+    </fragment>
+
+    <!-- Punto 4: Detalle de Publicación -->
+    <fragment
+        android:id="@+id/detallePublicacionFragment"
+        android:name="com.example.rondaapp.ui.home.DetallePublicacionFragment"
+        android:label="Detalle de Publicación"
+        tools:layout="@layout/fragment_detalle_publicacion">
+        <argument
+            android:name="publicationId"
+            app:argType="integer" />
+    </fragment>
+
+    <!-- Punto 2: perfil propio, con datos personales editables y reputación -->
+    <fragment
+        android:id="@+id/myProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.MyProfileFragment"
+        android:label="Mi perfil"
+        tools:layout="@layout/fragment_my_profile" />
+
+    <!-- Punto 2: perfil público de la otra parte, consultable antes de operar -->
+    <fragment
+        android:id="@+id/publicProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.PublicProfileFragment"
+        android:label="Perfil del vendedor"
+        tools:layout="@layout/fragment_public_profile">
+
+        <argument
+            android:name="userId"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+</navigation>
