@@ -14,7 +14,21 @@ import java.util.Locale;
 
 public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.PublicationViewHolder> {
 
+    /** Aviso de que se tocó el vendedor de una publicación, para abrir su perfil público. */
+    public interface OnSellerClickListener {
+        void onSellerClick(Publication publication);
+    }
+
     private List<Publication> publications = new ArrayList<>();
+    private OnSellerClickListener sellerClickListener;
+
+    /**
+     * Si no se setea, el nombre del vendedor se muestra pero no es clickeable.
+     * El perfil público usa el adapter así, para no navegar al mismo perfil.
+     */
+    public void setOnSellerClickListener(OnSellerClickListener listener) {
+        this.sellerClickListener = listener;
+    }
 
     /** Reemplaza la lista completa. Se usa al cargar la primera pagina. */
     public void setPublications(List<Publication> publications) {
@@ -61,6 +75,31 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
         } else {
             holder.tvZone.setVisibility(View.GONE);
         }
+
+        bindVendedor(holder, pub);
+    }
+
+    /**
+     * Muestra el vendedor y, si hay listener y la publicación tiene dueño,
+     * lo deja clickeable para abrir su perfil público.
+     */
+    private void bindVendedor(PublicationViewHolder holder, Publication pub) {
+        boolean hayVendedor = pub.getSellerName() != null && !pub.getSellerName().isEmpty();
+        if (!hayVendedor) {
+            holder.tvSeller.setVisibility(View.GONE);
+            holder.tvSeller.setOnClickListener(null);
+            return;
+        }
+
+        holder.tvSeller.setVisibility(View.VISIBLE);
+        holder.tvSeller.setText(holder.itemView.getContext()
+                .getString(R.string.publication_seller, pub.getSellerName()));
+
+        boolean navegable = sellerClickListener != null && pub.getUserId() != null;
+        holder.tvSeller.setClickable(navegable);
+        holder.tvSeller.setOnClickListener(navegable
+                ? v -> sellerClickListener.onSellerClick(pub)
+                : null);
     }
 
     @Override
@@ -69,7 +108,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     }
 
     static class PublicationViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvPrice, tvCondition, tvZone;
+        TextView tvTitle, tvPrice, tvCondition, tvZone, tvSeller;
 
         public PublicationViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,6 +116,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
             tvPrice = itemView.findViewById(R.id.tvPrice);
             tvCondition = itemView.findViewById(R.id.tvCondition);
             tvZone = itemView.findViewById(R.id.tvZone);
+            tvSeller = itemView.findViewById(R.id.tvSeller);
         }
     }
 }

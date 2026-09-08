@@ -6,11 +6,15 @@ import com.example.rondaapp.data.model.OtpRequestBody;
 import com.example.rondaapp.data.model.OtpVerifyBody;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.SimpleResponse;
+import com.example.rondaapp.data.model.UpdateProfileBody;
+import com.example.rondaapp.data.model.UserProfile;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
+import retrofit2.http.PUT;
+import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 /**
@@ -31,6 +35,18 @@ public interface ApiService {
 
     @POST("auth/login")
     Call<AuthResponse> loginWithPassword(@Body LoginBody body);
+
+    // --- Endpoints de Publicaciones (Home) ---
+
+    // --- Endpoints de Perfil y Reputación ---
+
+    /** Perfil de un usuario: datos personales, reputación y publicaciones activas. */
+    @GET("users/{id}")
+    Call<UserProfile> getUserProfile(@Path("id") String userId);
+
+    /** Edita los datos personales del perfil propio. */
+    @PUT("users/{id}")
+    Call<UserProfile> updateUserProfile(@Path("id") String userId, @Body UpdateProfileBody body);
 
     // --- Endpoints de Publicaciones (Home) ---
 
