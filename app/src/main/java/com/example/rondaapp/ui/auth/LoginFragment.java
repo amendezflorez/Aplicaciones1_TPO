@@ -20,8 +20,10 @@ import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.AuthResponse;
 import com.example.rondaapp.data.model.LoginBody;
 import com.example.rondaapp.data.network.ApiService;
-import com.example.rondaapp.data.network.RetrofitClient;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -30,7 +32,11 @@ import retrofit2.Response;
 /**
  * Pantalla de inicio de sesión (usuario y contraseña o enlace a OTP).
  */
+@AndroidEntryPoint
 public class LoginFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private static final String TAG = "LoginFragment";
 
@@ -72,8 +78,6 @@ public class LoginFragment extends Fragment {
 
             progressLogin.setVisibility(View.VISIBLE);
             btnLogin.setEnabled(false);
-
-            ApiService apiService = RetrofitClient.getApiService();
 
             apiService.loginWithPassword(new LoginBody(username, password))
                     .enqueue(new Callback<AuthResponse>() {

@@ -23,8 +23,10 @@ import com.example.rondaapp.data.model.OtpRequestBody;
 import com.example.rondaapp.data.model.OtpVerifyBody;
 import com.example.rondaapp.data.model.SimpleResponse;
 import com.example.rondaapp.data.network.ApiService;
-import com.example.rondaapp.data.network.RetrofitClient;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -33,7 +35,11 @@ import retrofit2.Response;
 /**
  * Paso 2 del flujo OTP: verificar el código de 6 dígitos.
  */
+@AndroidEntryPoint
 public class OtpVerificationFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private static final String TAG = "OtpVerificationFragment";
     private static final long RESEND_COOLDOWN_MS = 60_000L;
@@ -74,8 +80,6 @@ public class OtpVerificationFragment extends Fragment {
             progressOtp.setVisibility(View.VISIBLE);
             btnVerifyOtp.setEnabled(false);
 
-            ApiService apiService = RetrofitClient.getApiService();
-
             apiService.verifyOtp(new OtpVerifyBody(email, code))
                     .enqueue(new Callback<AuthResponse>() {
                         @Override
@@ -111,8 +115,6 @@ public class OtpVerificationFragment extends Fragment {
         });
 
         btnResendOtp.setOnClickListener(v -> {
-            ApiService apiService = RetrofitClient.getApiService();
-
             apiService.resendOtp(new OtpRequestBody(email))
                     .enqueue(new Callback<SimpleResponse>() {
                         @Override

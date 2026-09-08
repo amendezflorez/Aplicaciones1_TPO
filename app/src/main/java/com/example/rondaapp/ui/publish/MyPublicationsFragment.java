@@ -21,8 +21,11 @@ import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.PublicationStatusBody;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -32,7 +35,11 @@ import retrofit2.Response;
  * Punto 5: "Mis publicaciones", con el estado de cada una
  * (activa / pausada / vendida) y las acciones de pausar y reactivar.
  */
+@AndroidEntryPoint
 public class MyPublicationsFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private RecyclerView rvMyPublications;
     private MyPublicationAdapter adapter;
@@ -89,7 +96,7 @@ public class MyPublicationsFragment extends Fragment {
         }
 
         progressMyPublications.setVisibility(View.VISIBLE);
-        RetrofitClient.getApiService().getMyPublications(userId).enqueue(new Callback<PublicationResponse>() {
+        apiService.getMyPublications(userId).enqueue(new Callback<PublicationResponse>() {
             @Override
             public void onResponse(@NonNull Call<PublicationResponse> call,
                                    @NonNull Response<PublicationResponse> response) {
@@ -128,7 +135,7 @@ public class MyPublicationsFragment extends Fragment {
         if (!exigirConexion()) return;
         progressMyPublications.setVisibility(View.VISIBLE);
 
-        RetrofitClient.getApiService()
+        apiService
                 .updatePublicationStatus(publication.getId(), new PublicationStatusBody(nuevoEstado))
                 .enqueue(new Callback<Publication>() {
                     @Override

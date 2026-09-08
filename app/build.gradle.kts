@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -46,6 +47,10 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.gson)
+
+    // Inyección de dependencias (Hilt)
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
 
     // UI
     implementation(libs.androidx.recyclerview)

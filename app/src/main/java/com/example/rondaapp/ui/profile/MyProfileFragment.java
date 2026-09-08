@@ -18,8 +18,11 @@ import com.example.rondaapp.R;
 import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.model.UpdateProfileBody;
 import com.example.rondaapp.data.model.UserProfile;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -31,7 +34,11 @@ import retrofit2.Response;
  * que es de solo lectura porque la construye el backend con las
  * calificaciones recibidas.
  */
+@AndroidEntryPoint
 public class MyProfileFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private EditText etName, etEmail, etPhone, etZone;
     private Button btnSaveProfile;
@@ -80,7 +87,7 @@ public class MyProfileFragment extends Fragment {
         }
 
         mostrarProgreso(true);
-        RetrofitClient.getApiService().getUserProfile(userId).enqueue(new Callback<UserProfile>() {
+        apiService.getUserProfile(userId).enqueue(new Callback<UserProfile>() {
             @Override
             public void onResponse(@NonNull Call<UserProfile> call, @NonNull Response<UserProfile> response) {
                 if (!isAdded() || getView() == null) return;
@@ -147,7 +154,7 @@ public class MyProfileFragment extends Fragment {
                 telefono.isEmpty() ? null : telefono,
                 zona.isEmpty() ? null : zona);
 
-        RetrofitClient.getApiService().updateUserProfile(userId, body).enqueue(new Callback<UserProfile>() {
+        apiService.updateUserProfile(userId, body).enqueue(new Callback<UserProfile>() {
             @Override
             public void onResponse(@NonNull Call<UserProfile> call, @NonNull Response<UserProfile> response) {
                 if (!isAdded() || getView() == null) return;
