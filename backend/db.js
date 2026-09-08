@@ -81,6 +81,18 @@ const CREATE_TABLES = [
       comment TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (rated_user_id) REFERENCES users (id)
+    )`,
+
+  // Punto 5: las fotos del articulo. Se guardan como data URI en base64 para
+  // no necesitar un servidor de archivos aparte; por eso NUNCA se devuelven
+  // en los listados, solo por GET /api/publications/:id/photos.
+  `CREATE TABLE IF NOT EXISTS publication_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      publication_id INTEGER NOT NULL,
+      data TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE
     )`
 ];
 
@@ -194,6 +206,10 @@ async function init() {
   // "status" lo consume tambien el punto 5 (activa / pausada / vendida).
   await ensureColumn('publications', 'user_id', 'TEXT');
   await ensureColumn('publications', 'status', "TEXT NOT NULL DEFAULT 'activa'");
+
+  await dbAsync.run(
+    'CREATE INDEX IF NOT EXISTS idx_photos_publication ON publication_photos (publication_id, position)'
+  );
 
   await seedPublications();
   await seedUsersAndRatings();

@@ -21,6 +21,9 @@ public class Publication {
     @SerializedName("seller_name")
     private String sellerName;
 
+    @SerializedName("photo_count")
+    private int photoCount;
+
     // Getters
     public int getId() { return id; }
     public String getTitle() { return title; }
@@ -38,4 +41,7 @@ public class Publication {
     public String getUserId() { return userId; }
 
     public String getSellerName() { return sellerName; }
+
+    /** Cantidad de fotos. Los listados no traen los datos, solo el conteo. */
+    public int getPhotoCount() { return photoCount; }
 }

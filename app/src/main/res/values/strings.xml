@@ -70,4 +70,58 @@
     <string name="filter_near_my_zone">Solo cerca de mi zona</string>
     <string name="filter_near_zone_hint">Tu zona: %1$s. Incluye también los barrios linderos.</string>
     <string name="filter_near_zone_missing">Cargá tu zona en «Mi perfil» para usar este filtro.</string>
+
+    <!-- Publicar un artículo (punto 5) -->
+    <string name="home_publish">Publicar</string>
+    <string name="publish_step_title">Paso %1$d de %2$d · %3$s</string>
+    <string name="publish_step_photos">Fotos</string>
+    <string name="publish_step_data">Qué vendés</string>
+    <string name="publish_step_price">Precio y entrega</string>
+    <string name="publish_hint_photos">Elegí hasta %1$d fotos de tu galería. Son opcionales.</string>
+    <string name="publish_hint_data">Contá qué es y en qué categoría entra.</string>
+    <string name="publish_hint_price">Poné el precio, el estado del artículo y dónde lo entregás.</string>
+    <string name="publish_add_photos">Agregar fotos</string>
+    <string name="publish_no_photos">Todavía no agregaste fotos.</string>
+    <string name="publish_photo_position">Foto %1$d</string>
+    <string name="publish_photo_description">Foto del artículo</string>
+    <string name="publish_remove_photo">Quitar</string>
+    <string name="publish_title_hint">Título</string>
+    <string name="publish_description_hint">Descripción</string>
+    <string name="publish_category_label">Categoría</string>
+    <string name="publish_price_hint">Precio</string>
+    <string name="publish_condition_label">Estado del artículo</string>
+    <string name="publish_zone_hint">Zona de entrega</string>
+    <string name="publish_back">Atrás</string>
+    <string name="publish_next">Siguiente</string>
+    <string name="publish_submit">Publicar</string>
+    <string name="publish_success">¡Publicado!</string>
+    <string name="publish_draft_restored">Retomamos tu borrador</string>
+    <string name="publish_discard_draft">Descartar borrador</string>
+    <string name="publish_discard_title">¿Descartar el borrador?</string>
+    <string name="publish_discard_message">Se van a borrar los datos y las fotos que cargaste.</string>
+    <string name="publish_discard_confirm">Descartar</string>
+    <string name="publish_discarded">Borrador descartado</string>
+    <string name="publish_error_title">Poné un título</string>
+    <string name="publish_error_price">Poné un precio</string>
+    <string name="publish_error_price_invalid">El precio no es válido</string>
+    <string name="publish_error_photo">No pudimos usar alguna de las fotos</string>
+    <string name="publish_error_max_photos">Ya llegaste al máximo de %1$d fotos</string>
+    <string name="publish_error_generic">No pudimos publicar. Intentá de nuevo.</string>
+
+    <!-- Mis publicaciones (punto 5) -->
+    <string name="home_my_publications">Mis publicaciones</string>
+    <string name="my_publications_title">Mis publicaciones</string>
+    <string name="my_publications_empty">Todavía no publicaste nada.</string>
+    <string name="my_publications_publish_new">Publicar un artículo</string>
+    <string name="my_publications_error">No pudimos cargar tus publicaciones</string>
+    <string name="my_publications_error_status">No pudimos cambiar el estado</string>
+    <string name="my_publication_pause">Pausar</string>
+    <string name="my_publication_reactivate">Reactivar</string>
+    <string name="my_publication_paused">Publicación pausada</string>
+    <string name="my_publication_reactivated">Publicación reactivada</string>
+
+    <plurals name="my_publication_photos">
+        <item quantity="one">%d foto</item>
+        <item quantity="other">%d fotos</item>
+    </plurals>
 </resources>

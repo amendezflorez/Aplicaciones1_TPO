@@ -28,6 +28,42 @@
         <action
             android:id="@+id/action_home_to_publicProfile"
             app:destination="@id/publicProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_myPublications"
+            app:destination="@id/myPublicationsFragment" />
+
+        <action
+            android:id="@+id/action_home_to_publish"
+            app:destination="@id/publishFragment" />
+    </fragment>
+
+    <!-- Punto 5: carga guiada para publicar un artículo -->
+    <fragment
+        android:id="@+id/publishFragment"
+        android:name="com.example.rondaapp.ui.publish.PublishFragment"
+        android:label="Publicar un artículo"
+        tools:layout="@layout/fragment_publish">
+
+        <!-- Al publicar se vuelve a la lista, sacando el formulario del back stack
+             para que "atrás" no reabra un borrador que ya se envió. -->
+        <action
+            android:id="@+id/action_publish_to_myPublications"
+            app:destination="@id/myPublicationsFragment"
+            app:popUpTo="@id/publishFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Punto 5: mis publicaciones con su estado y pausar/reactivar -->
+    <fragment
+        android:id="@+id/myPublicationsFragment"
+        android:name="com.example.rondaapp.ui.publish.MyPublicationsFragment"
+        android:label="Mis publicaciones"
+        tools:layout="@layout/fragment_my_publications">
+
+        <action
+            android:id="@+id/action_myPublications_to_publish"
+            app:destination="@id/publishFragment" />
     </fragment>
 
     <!-- Punto 2: perfil propio, con datos personales editables y reputación -->
