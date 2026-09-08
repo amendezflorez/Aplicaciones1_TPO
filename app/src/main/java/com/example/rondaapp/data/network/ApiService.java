@@ -58,6 +58,7 @@ public interface ApiService {
             @Query("minPrice") Double minPrice,
             @Query("maxPrice") Double maxPrice,
             @Query("zone") String zone,
+            @Query("nearZone") String nearZone,
             @Query("sortBy") String sortBy,
             @Query("page") int page,
             @Query("limit") int limit

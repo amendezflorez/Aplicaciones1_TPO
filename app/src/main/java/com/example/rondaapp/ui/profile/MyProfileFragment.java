@@ -105,6 +105,9 @@ public class MyProfileFragment extends Fragment {
         etPhone.setText(perfil.getPhone() != null ? perfil.getPhone() : "");
         etZone.setText(perfil.getZone() != null ? perfil.getZone() : "");
 
+        // El filtro de cercanía del Home lee la zona desde la sesión: se refresca acá.
+        sessionManager.setZone(perfil.getZone());
+
         tvReputationAverage.setText(ProfileFormatter.promedio(requireContext(), perfil.getReputation()));
         tvReputationCount.setText(ProfileFormatter.cantidadCalificaciones(requireContext(), perfil.getReputation()));
         tvReputationOperations.setText(ProfileFormatter.operaciones(requireContext(), perfil.getReputation()));
@@ -151,6 +154,7 @@ public class MyProfileFragment extends Fragment {
                 UserProfile actualizado = response.body();
                 // El Home saluda con el nombre cacheado en la sesión: hay que refrescarlo.
                 sessionManager.updateDatosBasicos(actualizado.getName(), actualizado.getEmail());
+                sessionManager.setZone(actualizado.getZone());
                 Toast.makeText(getContext(), R.string.profile_saved, Toast.LENGTH_SHORT).show();
             }
 

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
 const db = require('./db');
+const { zonasCercanas } = require('./zones');
 
 const app = express();
 app.use(cors());
@@ -58,6 +59,9 @@ app.post('/api/auth/login', async (req, res) => {
       userId: user.id,
       email: user.email,
       name: user.name,
+      // La zona viaja en el login para que el filtro de cercania del Home
+      // funcione sin tener que pedir el perfil aparte.
+      zone: user.zone || null,
     });
   } catch (error) {
     console.error('Error en /api/auth/login:', error);
@@ -144,6 +148,9 @@ app.post('/api/auth/otp/verify', async (req, res) => {
       userId: user.id,
       email: user.email,
       name: user.name,
+      // La zona viaja en el login para que el filtro de cercania del Home
+      // funcione sin tener que pedir el perfil aparte.
+      zone: user.zone || null,
     });
   } catch (error) {
     console.error('Error en /api/auth/otp/verify:', error);
@@ -163,6 +170,7 @@ app.get('/api/publications', async (req, res) => {
     minPrice,
     maxPrice,
     zone,
+    nearZone,
     sortBy,
     page = 1,
     limit = 10
@@ -189,6 +197,18 @@ app.get('/api/publications', async (req, res) => {
   if (zone) {
     whereClause += ' AND p.zone = ?';
     filterParams.push(zone);
+  }
+  // Punto 3: "cercanía a la zona del usuario". No es igualdad: se expande la
+  // zona propia a ella misma más sus barrios linderos. Si el usuario tiene
+  // seteada una zona que no está en la tabla, zonasCercanas() devuelve solo
+  // esa y el filtro degrada a igualdad exacta.
+  if (nearZone) {
+    const cercanas = zonasCercanas(nearZone);
+    if (cercanas.length > 0) {
+      const placeholders = cercanas.map(() => '?').join(', ');
+      whereClause += ` AND p.zone IN (${placeholders})`;
+      filterParams.push(...cercanas);
+    }
   }
   if (minPrice) {
     whereClause += ' AND p.price >= ?';

@@ -56,6 +56,21 @@
             android:layout_height="wrap_content"
             android:hint="Ej: Palermo, Caballito"
             android:inputType="text"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Punto 3: cercanía a la zona del usuario. Al tildarlo se ignora la
+             zona escrita arriba y se filtra por el barrio propio + los linderos. -->
+        <CheckBox
+            android:id="@+id/cbNearMyZone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/filter_near_my_zone" />
+
+        <TextView
+            android:id="@+id/tvNearZoneHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
             android:layout_marginBottom="12dp" />
 
         <!-- Rango de Precios -->

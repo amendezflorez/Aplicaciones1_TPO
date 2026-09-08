@@ -65,4 +65,9 @@
     <string name="public_profile_zone">Zona: %1$s</string>
     <string name="public_profile_active_publications">Publicaciones activas (%1$d)</string>
     <string name="public_profile_no_publications">Este usuario no tiene publicaciones activas</string>
+
+    <!-- Filtro de cercanía (punto 3) -->
+    <string name="filter_near_my_zone">Solo cerca de mi zona</string>
+    <string name="filter_near_zone_hint">Tu zona: %1$s. Incluye también los barrios linderos.</string>
+    <string name="filter_near_zone_missing">Cargá tu zona en «Mi perfil» para usar este filtro.</string>
 </resources>

@@ -9,6 +9,7 @@ public class AuthResponse {
     private String userId;
     private String email;
     private String name;
+    private String zone;
 
     public String getToken() {
         return token;
@@ -24,5 +25,10 @@ public class AuthResponse {
 
     public String getName() {
         return name;
+    }
+
+    /** Zona del usuario, para anclar el filtro de cercania sin pedir el perfil. */
+    public String getZone() {
+        return zone;
     }
 }
