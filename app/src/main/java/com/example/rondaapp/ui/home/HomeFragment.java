@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
@@ -55,6 +56,7 @@ public class HomeFragment extends Fragment {
     private Button btnLogout;
     private Button btnMyProfile;
     private ProgressBar progressPaging;
+    private SessionManager sessionManager;
 
     // Estados de búsqueda y filtros
     private String currentSearch = null;
@@ -64,6 +66,8 @@ public class HomeFragment extends Fragment {
     private String selectedZone = null;
     private Double selectedMinPrice = null;
     private Double selectedMaxPrice = null;
+    /** Zona propia cuando el filtro de cercanía está activo; null si no lo está. */
+    private String selectedNearZone = null;
 
     // Estado de la paginación
     private int currentPage = 1;
@@ -80,7 +84,7 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        SessionManager sessionManager = new SessionManager(requireContext());
+        sessionManager = new SessionManager(requireContext());
         String username = getArguments() != null ? getArguments().getString("username", "") : "";
         if (username.isEmpty() && sessionManager.getName() != null) {
             username = sessionManager.getName();
@@ -227,6 +231,10 @@ public class HomeFragment extends Fragment {
         EditText etMaxPrice = dialogView.findViewById(R.id.etMaxPrice);
         Button btnApply = dialogView.findViewById(R.id.btnApplyFilters);
         Button btnClear = dialogView.findViewById(R.id.btnClearFilters);
+        CheckBox cbNearMyZone = dialogView.findViewById(R.id.cbNearMyZone);
+        TextView tvNearZoneHint = dialogView.findViewById(R.id.tvNearZoneHint);
+
+        configurarCercania(cbNearMyZone, tvNearZoneHint, etZone);
 
         String[] categories = {"Todas", "Deportes", "Tecnología", "Hogar", "Música", "Indumentaria"};
         String[] conditions = {"Todos", "nuevo", "como nuevo", "usado"};
@@ -245,8 +253,16 @@ public class HomeFragment extends Fragment {
             String cond = spCondition.getSelectedItem().toString();
             selectedCondition = cond.equals("Todos") ? null : cond;
 
-            String zone = etZone.getText().toString().trim();
-            selectedZone = zone.isEmpty() ? null : zone;
+            // Si el usuario pidió cercanía, esa gana: no tiene sentido combinarla
+            // con una zona exacta escrita a mano.
+            if (cbNearMyZone.isChecked()) {
+                selectedNearZone = sessionManager.getZone();
+                selectedZone = null;
+            } else {
+                selectedNearZone = null;
+                String zone = etZone.getText().toString().trim();
+                selectedZone = zone.isEmpty() ? null : zone;
+            }
 
             String minP = etMinPrice.getText().toString().trim();
             selectedMinPrice = minP.isEmpty() ? null : Double.parseDouble(minP);
@@ -262,6 +278,7 @@ public class HomeFragment extends Fragment {
             selectedCategory = null;
             selectedCondition = null;
             selectedZone = null;
+            selectedNearZone = null;
             selectedMinPrice = null;
             selectedMaxPrice = null;
             fetchPublications(true);
@@ -276,6 +293,25 @@ public class HomeFragment extends Fragment {
      *              página 1 y reemplaza la lista. {@code false} cuando el scroll pide la
      *              página siguiente y hay que anexarla al final.
      */
+    /**
+     * El checkbox de cercanía solo sirve si el usuario tiene zona cargada, así que
+     * queda deshabilitado con una explicación si no la tiene. Mientras esté tildado
+     * se apaga el campo de zona exacta, porque los dos filtros se pisan.
+     */
+    private void configurarCercania(CheckBox cbNearMyZone, TextView tvNearZoneHint, EditText etZone) {
+        String miZona = sessionManager.getZone();
+        boolean tieneZona = miZona != null && !miZona.trim().isEmpty();
+
+        cbNearMyZone.setEnabled(tieneZona);
+        cbNearMyZone.setChecked(tieneZona && selectedNearZone != null);
+        tvNearZoneHint.setText(tieneZona
+                ? getString(R.string.filter_near_zone_hint, miZona)
+                : getString(R.string.filter_near_zone_missing));
+
+        etZone.setEnabled(!cbNearMyZone.isChecked());
+        cbNearMyZone.setOnCheckedChangeListener((v, tildado) -> etZone.setEnabled(!tildado));
+    }
+
     private void fetchPublications(boolean reset) {
         if (isLoading) return;
         if (!reset && !hasMore) return;
@@ -296,6 +332,7 @@ public class HomeFragment extends Fragment {
                 selectedMinPrice,
                 selectedMaxPrice,
                 selectedZone,
+                selectedNearZone,
                 currentSort,
                 paginaPedida,
                 PAGE_SIZE

@@ -86,7 +86,7 @@ public class LoginFragment extends Fragment {
                             if (response.isSuccessful() && response.body() != null) {
                                 AuthResponse auth = response.body();
                                 new SessionManager(requireContext()).saveSession(
-                                        auth.getToken(), auth.getUserId(), auth.getEmail(), auth.getName());
+                                        auth.getToken(), auth.getUserId(), auth.getEmail(), auth.getName(), auth.getZone());
 
                                 Bundle args = new Bundle();
                                 args.putString("username", auth.getName() != null ? auth.getName() : username);
