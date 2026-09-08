@@ -168,32 +168,34 @@ app.get('/api/publications', async (req, res) => {
     limit = 10
   } = req.query;
 
-  let query = 'SELECT * FROM publications WHERE 1=1';
-  const params = [];
+  // El WHERE se arma una sola vez y se reutiliza para el COUNT del total,
+  // asi el cliente sabe cuando dejar de pedir paginas.
+  let whereClause = ' WHERE 1=1';
+  const filterParams = [];
 
   if (search) {
-    query += ' AND (title LIKE ? OR description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    whereClause += ' AND (title LIKE ? OR description LIKE ?)';
+    filterParams.push(`%${search}%`, `%${search}%`);
   }
   if (category) {
-    query += ' AND category = ?';
-    params.push(category);
+    whereClause += ' AND category = ?';
+    filterParams.push(category);
   }
   if (condition) {
-    query += ' AND condition = ?';
-    params.push(condition);
+    whereClause += ' AND condition = ?';
+    filterParams.push(condition);
   }
   if (zone) {
-    query += ' AND zone = ?';
-    params.push(zone);
+    whereClause += ' AND zone = ?';
+    filterParams.push(zone);
   }
   if (minPrice) {
-    query += ' AND price >= ?';
-    params.push(Number(minPrice));
+    whereClause += ' AND price >= ?';
+    filterParams.push(Number(minPrice));
   }
   if (maxPrice) {
-    query += ' AND price <= ?';
-    params.push(Number(maxPrice));
+    whereClause += ' AND price <= ?';
+    filterParams.push(Number(maxPrice));
   }
 
   const sortMap = {
@@ -202,21 +204,23 @@ app.get('/api/publications', async (req, res) => {
     'recent': 'created_at DESC'
   };
   const orderByClause = sortMap[sortBy] || 'created_at DESC';
-  query += ` ORDER BY ${orderByClause}`;
 
   const limitNum = Math.max(1, parseInt(limit, 10) || 10);
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const offset = (pageNum - 1) * limitNum;
 
-  query += ' LIMIT ? OFFSET ?';
-  params.push(limitNum, offset);
+  const listQuery = `SELECT * FROM publications${whereClause} ORDER BY ${orderByClause} LIMIT ? OFFSET ?`;
+  const countQuery = `SELECT COUNT(*) AS total FROM publications${whereClause}`;
 
   try {
-    const rows = await db.all(query, params);
+    const rows = await db.all(listQuery, [...filterParams, limitNum, offset]);
+    const countRow = await db.get(countQuery, filterParams);
+
     res.json({
       data: rows,
       page: pageNum,
-      limit: limitNum
+      limit: limitNum,
+      total: countRow ? countRow.total : rows.length
     });
   } catch (error) {
     console.error('Error al consultar publicaciones:', error);

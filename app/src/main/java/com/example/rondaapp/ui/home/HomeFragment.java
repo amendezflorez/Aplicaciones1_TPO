@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,9 +24,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rondaapp.R;
+import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.network.RetrofitClient;
 import com.example.rondaapp.session.SessionManager;
+
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -36,13 +40,20 @@ import retrofit2.Response;
  */
 public class HomeFragment extends Fragment {
 
+    /** Cantidad de publicaciones que se piden por página. */
+    private static final int PAGE_SIZE = 20;
+    /** Cuántos ítems antes del final disparan la carga de la página siguiente. */
+    private static final int PREFETCH_THRESHOLD = 5;
+
     private RecyclerView rvPublications;
     private PublicationAdapter adapter;
+    private LinearLayoutManager layoutManager;
     private SearchView searchView;
     private Spinner spinnerSort;
     private Button btnFilter;
     private TextView tvWelcome;
     private Button btnLogout;
+    private ProgressBar progressPaging;
 
     // Estados de búsqueda y filtros
     private String currentSearch = null;
@@ -52,6 +63,11 @@ public class HomeFragment extends Fragment {
     private String selectedZone = null;
     private Double selectedMinPrice = null;
     private Double selectedMaxPrice = null;
+
+    // Estado de la paginación
+    private int currentPage = 1;
+    private boolean isLoading = false;
+    private boolean hasMore = true;
 
     @Nullable
     @Override
@@ -75,6 +91,7 @@ public class HomeFragment extends Fragment {
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
         btnFilter = view.findViewById(R.id.btnFilter);
+        progressPaging = view.findViewById(R.id.progressPaging);
 
         if (tvWelcome != null) {
             tvWelcome.setText(getString(R.string.home_welcome, username));
@@ -85,15 +102,42 @@ public class HomeFragment extends Fragment {
         }
 
         adapter = new PublicationAdapter();
-        rvPublications.setLayoutManager(new LinearLayoutManager(getContext()));
+        layoutManager = new LinearLayoutManager(getContext());
+        rvPublications.setLayoutManager(layoutManager);
         rvPublications.setAdapter(adapter);
+        setupInfiniteScroll();
 
         setupSortSpinner();
         setupSearchView();
 
         btnFilter.setOnClickListener(v -> showFiltersDialog());
 
-        fetchPublications();
+        fetchPublications(true);
+    }
+
+    /**
+     * Scroll infinito: cuando faltan pocos ítems para llegar al final de la lista,
+     * pide la página siguiente. Los guardas de {@link #fetchPublications(boolean)}
+     * evitan pedidos duplicados o pedir de más cuando ya no quedan resultados.
+     */
+    private void setupInfiniteScroll() {
+        rvPublications.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                if (dy <= 0) return; // solo interesa el scroll hacia abajo
+                if (isLoading || !hasMore) return;
+
+                int visibles = layoutManager.getChildCount();
+                int total = layoutManager.getItemCount();
+                int primeroVisible = layoutManager.findFirstVisibleItemPosition();
+
+                if (primeroVisible + visibles + PREFETCH_THRESHOLD >= total) {
+                    fetchPublications(false);
+                }
+            }
+        });
     }
 
     private void showLogoutConfirmationDialog(View view, SessionManager sessionManager) {
@@ -129,7 +173,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 currentSort = sortKeys[position];
-                fetchPublications();
+                fetchPublications(true);
             }
 
             @Override
@@ -142,7 +186,7 @@ public class HomeFragment extends Fragment {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 currentSearch = query.trim().isEmpty() ? null : query.trim();
-                fetchPublications();
+                fetchPublications(true);
                 return true;
             }
 
@@ -150,7 +194,7 @@ public class HomeFragment extends Fragment {
             public boolean onQueryTextChange(String newText) {
                 if (newText.trim().isEmpty() && currentSearch != null) {
                     currentSearch = null;
-                    fetchPublications();
+                    fetchPublications(true);
                 }
                 return true;
             }
@@ -197,7 +241,7 @@ public class HomeFragment extends Fragment {
             String maxP = etMaxPrice.getText().toString().trim();
             selectedMaxPrice = maxP.isEmpty() ? null : Double.parseDouble(maxP);
 
-            fetchPublications();
+            fetchPublications(true);
             dialog.dismiss();
         });
 
@@ -207,14 +251,31 @@ public class HomeFragment extends Fragment {
             selectedZone = null;
             selectedMinPrice = null;
             selectedMaxPrice = null;
-            fetchPublications();
+            fetchPublications(true);
             dialog.dismiss();
         });
 
         dialog.show();
     }
 
-    private void fetchPublications() {
+    /**
+     * @param reset {@code true} cuando cambian búsqueda, filtros u ordenamiento: vuelve a la
+     *              página 1 y reemplaza la lista. {@code false} cuando el scroll pide la
+     *              página siguiente y hay que anexarla al final.
+     */
+    private void fetchPublications(boolean reset) {
+        if (isLoading) return;
+        if (!reset && !hasMore) return;
+
+        if (reset) {
+            currentPage = 1;
+            hasMore = true;
+        }
+
+        final int paginaPedida = reset ? 1 : currentPage + 1;
+        isLoading = true;
+        mostrarProgreso(!reset);
+
         RetrofitClient.getApiService().getPublications(
                 currentSearch,
                 selectedCategory,
@@ -223,22 +284,53 @@ public class HomeFragment extends Fragment {
                 selectedMaxPrice,
                 selectedZone,
                 currentSort,
-                1,
-                20
+                paginaPedida,
+                PAGE_SIZE
         ).enqueue(new Callback<PublicationResponse>() {
             @Override
             public void onResponse(Call<PublicationResponse> call, Response<PublicationResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    adapter.setPublications(response.body().getData());
-                } else {
+                if (!isAdded() || getView() == null) return; // la vista ya se destruyó
+                isLoading = false;
+                mostrarProgreso(false);
+
+                if (!response.isSuccessful() || response.body() == null) {
                     Toast.makeText(getContext(), "Error al cargar publicaciones", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                PublicationResponse body = response.body();
+                List<Publication> pagina = body.getData();
+                int recibidas = (pagina != null) ? pagina.size() : 0;
+
+                if (reset) {
+                    adapter.setPublications(pagina);
+                } else {
+                    adapter.addPublications(pagina);
+                }
+                currentPage = paginaPedida;
+
+                // El backend devuelve el total que matchea los filtros; si por lo que sea
+                // no viniera, caemos en la heurística de "vino una página incompleta".
+                if (body.getTotal() > 0) {
+                    hasMore = adapter.getItemCountLoaded() < body.getTotal();
+                } else {
+                    hasMore = recibidas == PAGE_SIZE;
                 }
             }
 
             @Override
             public void onFailure(Call<PublicationResponse> call, Throwable t) {
+                if (!isAdded() || getView() == null) return;
+                isLoading = false;
+                mostrarProgreso(false);
                 Toast.makeText(getContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void mostrarProgreso(boolean visible) {
+        if (progressPaging != null) {
+            progressPaging.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 }

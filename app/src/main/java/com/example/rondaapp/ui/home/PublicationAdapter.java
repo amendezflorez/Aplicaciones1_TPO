@@ -16,9 +16,22 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
 
     private List<Publication> publications = new ArrayList<>();
 
+    /** Reemplaza la lista completa. Se usa al cargar la primera pagina. */
     public void setPublications(List<Publication> publications) {
-        this.publications = (publications != null) ? publications : new ArrayList<>();
+        this.publications = (publications != null) ? new ArrayList<>(publications) : new ArrayList<>();
         notifyDataSetChanged();
+    }
+
+    /** Anexa una pagina al final de la lista. Se usa en el scroll infinito. */
+    public void addPublications(List<Publication> nuevas) {
+        if (nuevas == null || nuevas.isEmpty()) return;
+        int desde = publications.size();
+        publications.addAll(nuevas);
+        notifyItemRangeInserted(desde, nuevas.size());
+    }
+
+    public int getItemCountLoaded() {
+        return publications.size();
     }
 
     @NonNull
