@@ -52,6 +52,10 @@ dependencies {
     implementation(libs.hilt.android)
     annotationProcessor(libs.hilt.compiler)
 
+    // Persistencia local (Room)
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room.compiler)
+
     // UI
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.cardview)
