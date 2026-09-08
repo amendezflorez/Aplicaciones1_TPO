@@ -113,7 +113,9 @@ app.post('/api/auth/otp/request', async (req, res) => {
       ON CONFLICT(email) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at
     `, [email, code, expiresAt]);
 
-    console.log(`\n📩 Código OTP para ${email}: ${code}\n`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n📩 Código OTP para ${email}: ${code}\n`);
+    }
     enviarOtpPorMail(email, code);
     res.json({ success: true, message: 'Código enviado' });
   } catch (error) {
