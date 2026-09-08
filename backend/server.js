@@ -1,6 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
+const nodemailer = require('nodemailer');
 const db = require('./db');
 const { zonasCercanas } = require('./zones');
 
@@ -15,6 +17,32 @@ const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de validez
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Transporter de Gmail: la conexión que despacha los mails.
+// Las credenciales vienen del .env, nunca escritas en el código.
+const mailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
+
+// Manda el código OTP por mail. Es async pero no bloquea la respuesta:
+// si el mail falla, el código igual quedó guardado y se ve en consola.
+async function enviarOtpPorMail(email, code) {
+  try {
+    await mailTransporter.sendMail({
+      from: process.env.MAIL_FROM,
+      to: email,
+      subject: 'Tu código de acceso a Ronda',
+      text: `Tu código de verificación es: ${code}\n\nVence en 5 minutos.`,
+    });
+    console.log(`✅ Mail con OTP enviado a ${email}`);
+  } catch (error) {
+    console.error(`❌ No se pudo enviar el mail a ${email}:`, error.message);
+  }
 }
 
 // Log simple de solicitudes entrantes
@@ -86,6 +114,7 @@ app.post('/api/auth/otp/request', async (req, res) => {
     `, [email, code, expiresAt]);
 
     console.log(`\n📩 Código OTP para ${email}: ${code}\n`);
+    enviarOtpPorMail(email, code);
     res.json({ success: true, message: 'Código enviado' });
   } catch (error) {
     console.error('Error en /api/auth/otp/request:', error);
@@ -108,6 +137,7 @@ app.post('/api/auth/otp/resend', async (req, res) => {
     `, [email, code, expiresAt]);
 
     console.log(`\n📩 Código OTP reenviado para ${email}: ${code}\n`);
+    enviarOtpPorMail(email, code);
     res.json({ success: true, message: 'Código reenviado' });
   } catch (error) {
     console.error('Error en /api/auth/otp/resend:', error);
