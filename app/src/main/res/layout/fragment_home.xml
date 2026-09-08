@@ -70,6 +70,19 @@
             android:textSize="11sp" />
     </LinearLayout>
 
+    <!-- Punto 6: aviso de que se está mostrando información cacheada -->
+    <TextView
+        android:id="@+id/tvOfflineBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3CD"
+        android:textColor="#7A5B00"
+        android:padding="10dp"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="Sin conexión · mostrando lo último cargado" />
+
     <!-- Buscador + Botón de Filtros -->
     <LinearLayout
         android:layout_width="match_parent"

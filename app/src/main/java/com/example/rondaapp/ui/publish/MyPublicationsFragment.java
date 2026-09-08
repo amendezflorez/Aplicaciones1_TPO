@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rondaapp.R;
+import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.PublicationStatusBody;
@@ -40,6 +41,7 @@ public class MyPublicationsFragment extends Fragment {
     private Button btnGoPublish;
 
     private SessionManager sessionManager;
+    private ConnectivityWatcher connectivityWatcher;
 
     @Nullable
     @Override
@@ -58,13 +60,16 @@ public class MyPublicationsFragment extends Fragment {
         btnGoPublish = view.findViewById(R.id.btnGoPublish);
 
         sessionManager = new SessionManager(requireContext());
+        connectivityWatcher = new ConnectivityWatcher(requireContext());
 
         adapter = new MyPublicationAdapter(this::cambiarEstado);
         rvMyPublications.setLayoutManager(new LinearLayoutManager(getContext()));
         rvMyPublications.setAdapter(adapter);
 
-        btnGoPublish.setOnClickListener(v ->
-                Navigation.findNavController(v).navigate(R.id.action_myPublications_to_publish));
+        btnGoPublish.setOnClickListener(v -> {
+            if (!exigirConexion()) return;
+            Navigation.findNavController(v).navigate(R.id.action_myPublications_to_publish);
+        });
         // La carga la hace onResume, que corre siempre después de esto y además
         // cubre la vuelta desde el formulario.
     }
@@ -111,7 +116,16 @@ public class MyPublicationsFragment extends Fragment {
         });
     }
 
+    /** Punto 6: pausar y reactivar escriben en el servidor, así que exigen conexión. */
+    private boolean exigirConexion() {
+        if (connectivityWatcher.hayConexion()) return true;
+        Toast.makeText(requireContext(), R.string.offline_action_needs_connection,
+                Toast.LENGTH_SHORT).show();
+        return false;
+    }
+
     private void cambiarEstado(Publication publication, String nuevoEstado) {
+        if (!exigirConexion()) return;
         progressMyPublications.setVisibility(View.VISIBLE);
 
         RetrofitClient.getApiService()

@@ -15,6 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.example.rondaapp.R;
+import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.model.UpdateProfileBody;
 import com.example.rondaapp.data.model.UserProfile;
 import com.example.rondaapp.data.network.RetrofitClient;
@@ -39,6 +40,7 @@ public class MyProfileFragment extends Fragment {
 
     private SessionManager sessionManager;
     private String userId;
+    private ConnectivityWatcher connectivityWatcher;
 
     @Nullable
     @Override
@@ -64,6 +66,7 @@ public class MyProfileFragment extends Fragment {
 
         sessionManager = new SessionManager(requireContext());
         userId = sessionManager.getUserId();
+        connectivityWatcher = new ConnectivityWatcher(requireContext());
 
         btnSaveProfile.setOnClickListener(v -> guardarPerfil());
 
@@ -118,6 +121,13 @@ public class MyProfileFragment extends Fragment {
     }
 
     private void guardarPerfil() {
+        // Punto 6: editar el perfil escribe en el servidor.
+        if (!connectivityWatcher.hayConexion()) {
+            Toast.makeText(requireContext(), R.string.offline_action_needs_connection,
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String nombre = etName.getText().toString().trim();
         if (nombre.isEmpty()) {
             etName.setError(getString(R.string.profile_error_empty_name));

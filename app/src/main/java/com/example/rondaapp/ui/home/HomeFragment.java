@@ -25,6 +25,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rondaapp.R;
+import com.example.rondaapp.data.local.ConnectivityWatcher;
+import com.example.rondaapp.data.local.OfflineCache;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.network.RetrofitClient;
@@ -59,6 +61,11 @@ public class HomeFragment extends Fragment {
     private Button btnMyPublications;
     private ProgressBar progressPaging;
     private SessionManager sessionManager;
+    private TextView tvOfflineBanner;
+    private OfflineCache offlineCache;
+    private ConnectivityWatcher connectivityWatcher;
+    /** Se está mostrando el listado cacheado en vez del del servidor. */
+    private boolean mostrandoCache = false;
 
     // Estados de búsqueda y filtros
     private String currentSearch = null;
@@ -87,6 +94,8 @@ public class HomeFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         sessionManager = new SessionManager(requireContext());
+        offlineCache = new OfflineCache(requireContext());
+        connectivityWatcher = new ConnectivityWatcher(requireContext());
         String username = getArguments() != null ? getArguments().getString("username", "") : "";
         if (username.isEmpty() && sessionManager.getName() != null) {
             username = sessionManager.getName();
@@ -102,6 +111,7 @@ public class HomeFragment extends Fragment {
         spinnerSort = view.findViewById(R.id.spinnerSort);
         btnFilter = view.findViewById(R.id.btnFilter);
         progressPaging = view.findViewById(R.id.progressPaging);
+        tvOfflineBanner = view.findViewById(R.id.tvOfflineBanner);
 
         if (tvWelcome != null) {
             tvWelcome.setText(getString(R.string.home_welcome, username));
@@ -118,8 +128,10 @@ public class HomeFragment extends Fragment {
 
         // Punto 5: dos entradas distintas, el formulario y la lista.
         if (btnPublish != null) {
-            btnPublish.setOnClickListener(v ->
-                    Navigation.findNavController(v).navigate(R.id.action_home_to_publish));
+            btnPublish.setOnClickListener(v -> {
+                if (!exigirConexion()) return;
+                Navigation.findNavController(v).navigate(R.id.action_home_to_publish);
+            });
         }
 
         if (btnMyPublications != null) {
@@ -130,6 +142,8 @@ public class HomeFragment extends Fragment {
         adapter = new PublicationAdapter();
         // Punto 2: desde la tarjeta se llega al perfil público del vendedor.
         adapter.setOnSellerClickListener(publication -> {
+            // El perfil público se pide al servidor: sin conexión no hay nada que mostrar.
+            if (!exigirConexion()) return;
             Bundle args = new Bundle();
             args.putString("userId", publication.getUserId());
             Navigation.findNavController(view).navigate(R.id.action_home_to_publicProfile, args);
@@ -144,7 +158,32 @@ public class HomeFragment extends Fragment {
 
         btnFilter.setOnClickListener(v -> showFiltersDialog());
 
+        observarConectividad();
         fetchPublications(true);
+    }
+
+    /**
+     * Punto 6: cuando vuelve la conexión se refresca solo, sin que el usuario
+     * tenga que hacer nada. El watcher se da de baja en onDestroyView, igual que
+     * el CountDownTimer del OTP.
+     */
+    private void observarConectividad() {
+        connectivityWatcher.observar(hayConexion -> {
+            if (!isAdded() || getView() == null) return;
+
+            if (hayConexion && mostrandoCache) {
+                Toast.makeText(getContext(), R.string.offline_reconnected, Toast.LENGTH_SHORT).show();
+                fetchPublications(true);
+            } else if (!hayConexion) {
+                actualizarBanner();
+            }
+        });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        connectivityWatcher.dejarDeObservar();
     }
 
     /**
@@ -177,8 +216,9 @@ public class HomeFragment extends Fragment {
                 .setTitle(R.string.logout_dialog_title)
                 .setMessage(R.string.logout_dialog_message)
                 .setPositiveButton(R.string.logout_dialog_confirm, (dialog, which) -> {
-                    // 1. Limpiar sesión guardada en SharedPreferences
+                    // 1. Limpiar sesión y el caché offline, que es de esta persona
                     sessionManager.clear();
+                    offlineCache.limpiar();
                     Toast.makeText(requireContext(), R.string.logout_success_toast, Toast.LENGTH_SHORT).show();
 
                     // 2. Limpiar la pila de navegación y volver a la pantalla de Login
@@ -336,6 +376,12 @@ public class HomeFragment extends Fragment {
             hasMore = true;
         }
 
+        // Punto 6: sin conexión no tiene sentido esperar el timeout de la request.
+        if (!connectivityWatcher.hayConexion()) {
+            mostrarDesdeCache(reset);
+            return;
+        }
+
         final int paginaPedida = reset ? 1 : currentPage + 1;
         isLoading = true;
         mostrarProgreso(!reset);
@@ -369,6 +415,14 @@ public class HomeFragment extends Fragment {
 
                 if (reset) {
                     adapter.setPublications(pagina);
+                    // Solo se cachea la primera página: es lo que se muestra al
+                    // abrir el Home sin conexión.
+                    offlineCache.guardarListado(pagina);
+                    mostrandoCache = false;
+                    // Una respuesta exitosa prueba que hay conexión mejor que
+                    // NET_CAPABILITY_VALIDATED, que tarda unos segundos más en
+                    // llegar y dejaría el aviso puesto sobre datos ya frescos.
+                    tvOfflineBanner.setVisibility(View.GONE);
                 } else {
                     adapter.addPublications(pagina);
                 }
@@ -388,9 +442,71 @@ public class HomeFragment extends Fragment {
                 if (!isAdded() || getView() == null) return;
                 isLoading = false;
                 mostrarProgreso(false);
-                Toast.makeText(getContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+
+                // Punto 6: si el servidor no responde vale lo mismo que estar sin
+                // conexión, así que se muestra lo último que se cargó bien.
+                if (reset && offlineCache.hayListado()) {
+                    mostrarDesdeCache(true);
+                } else {
+                    Toast.makeText(getContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
             }
         });
+    }
+
+    /**
+     * Punto 6: muestra el último listado que llegó bien del servidor, avisando
+     * que puede estar desactualizado. Sin paginación: lo cacheado es una sola
+     * página, así que no hay más para pedir.
+     */
+    private void mostrarDesdeCache(boolean reset) {
+        isLoading = false;
+        mostrarProgreso(false);
+
+        if (!reset) return; // el scroll no puede traer más de lo que hay guardado
+
+        List<Publication> cacheadas = offlineCache.leerListado();
+        adapter.setPublications(cacheadas);
+        hasMore = false;
+        mostrandoCache = true;
+        actualizarBanner();
+    }
+
+    private void actualizarBanner() {
+        if (tvOfflineBanner == null) return;
+
+        boolean hayConexion = connectivityWatcher.hayConexion();
+        if (hayConexion && !mostrandoCache) {
+            tvOfflineBanner.setVisibility(View.GONE);
+            return;
+        }
+
+        tvOfflineBanner.setVisibility(View.VISIBLE);
+        tvOfflineBanner.setText(offlineCache.hayListado()
+                ? getString(R.string.offline_banner, antiguedadDelCache())
+                : getString(R.string.offline_banner_no_cache));
+    }
+
+    /** "recién", "hace 5 min", "hace 2 h"… para que el aviso diga qué tan viejo es. */
+    private String antiguedadDelCache() {
+        long guardadoEn = offlineCache.guardadoEn();
+        if (guardadoEn <= 0) return getString(R.string.offline_just_now);
+
+        long minutos = (System.currentTimeMillis() - guardadoEn) / 60000L;
+        if (minutos < 1) return getString(R.string.offline_just_now);
+        if (minutos < 60) return getString(R.string.offline_minutes_ago, minutos);
+
+        long horas = minutos / 60;
+        if (horas < 24) return getString(R.string.offline_hours_ago, horas);
+        return getString(R.string.offline_days_ago, horas / 24);
+    }
+
+    /** Punto 6: las acciones que necesitan servidor se bloquean sin conexión. */
+    private boolean exigirConexion() {
+        if (connectivityWatcher.hayConexion()) return true;
+        Toast.makeText(requireContext(), R.string.offline_action_needs_connection,
+                Toast.LENGTH_SHORT).show();
+        return false;
     }
 
     private void mostrarProgreso(boolean visible) {
