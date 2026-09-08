@@ -37,4 +37,19 @@
     <string name="logout_dialog_confirm">Cerrar sesión</string>
     <string name="logout_dialog_cancel">Cancelar</string>
     <string name="logout_success_toast">Sesión cerrada exitosamente</string>
+
+    <!-- Favoritos & Búsquedas Guardadas (Feature 11) -->
+    <string name="favorite_button">Agregar a favoritos</string>
+    <string name="remove_favorite">Eliminar de favoritos</string>
+    <string name="no_favorites">No tienes publicaciones favoritas</string>
+    <string name="error_loading_favorites">Error al cargar favoritos</string>
+    <string name="favorite_removed">Favorito eliminado</string>
+    <string name="error_removing_favorite">Error al eliminar favorito</string>
+    <string name="no_saved_searches">No tienes búsquedas guardadas</string>
+    <string name="error_loading_searches">Error al cargar búsquedas</string>
+    <string name="search_deleted">Búsqueda eliminada</string>
+    <string name="error_deleting_search">Error al eliminar búsqueda</string>
+    <string name="execute_search">Ejecutar</string>
+    <string name="delete_search">Eliminar búsqueda</string>
+    <string name="error_session_expired">Sesión expirada</string>
 </resources>

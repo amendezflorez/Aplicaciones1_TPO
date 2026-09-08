@@ -71,6 +71,32 @@ db.serialize(() => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      publicationId INTEGER NOT NULL,
+      savedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(userId, publicationId),
+      FOREIGN KEY (publicationId) REFERENCES publications(id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS saved_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      searchTerm TEXT,
+      category TEXT,
+      minPrice REAL,
+      maxPrice REAL,
+      condition TEXT,
+      zone TEXT,
+      sort TEXT DEFAULT 'recent',
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   db.get('SELECT COUNT(*) as count FROM publications', (err, row) => {
     if (!err && row && row.count === 0) {
       const stmt = db.prepare(`

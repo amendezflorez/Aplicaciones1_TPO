@@ -3,21 +3,45 @@ package com.example.rondaapp.ui.home;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.Publication;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.PublicationViewHolder> {
 
     private List<Publication> publications = new ArrayList<>();
+    private Set<Integer> favoriteIds = new HashSet<>();
+    private OnPublicationActionListener actionListener;
 
     public void setPublications(List<Publication> publications) {
         this.publications = (publications != null) ? publications : new ArrayList<>();
+        notifyDataSetChanged();
+    }
+
+    public void setActionListener(OnPublicationActionListener listener) {
+        this.actionListener = listener;
+    }
+
+    public void updateFavorites(Set<Integer> favorites) {
+        this.favoriteIds = new HashSet<>(favorites);
+        notifyDataSetChanged();
+    }
+
+    public void addFavorite(int publicationId) {
+        favoriteIds.add(publicationId);
+        notifyDataSetChanged();
+    }
+
+    public void removeFavorite(int publicationId) {
+        favoriteIds.remove(publicationId);
         notifyDataSetChanged();
     }
 
@@ -48,6 +72,22 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
         } else {
             holder.tvZone.setVisibility(View.GONE);
         }
+
+        // Actualizar estado del botón de favorito
+        boolean isFavorite = favoriteIds.contains(pub.getId());
+        holder.btnFavorite.setSelected(isFavorite);
+        holder.btnFavorite.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onFavoriteClicked(pub, !isFavorite);
+            }
+        });
+
+        // Listener para click en el item (ir a detalle)
+        holder.itemView.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onPublicationClicked(pub);
+            }
+        });
     }
 
     @Override
@@ -57,6 +97,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
 
     static class PublicationViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvPrice, tvCondition, tvZone;
+        ImageButton btnFavorite;
 
         public PublicationViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -64,6 +105,13 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
             tvPrice = itemView.findViewById(R.id.tvPrice);
             tvCondition = itemView.findViewById(R.id.tvCondition);
             tvZone = itemView.findViewById(R.id.tvZone);
+            btnFavorite = itemView.findViewById(R.id.btnFavorite);
         }
+    }
+
+    // Interface para manejar acciones en las publicaciones
+    public interface OnPublicationActionListener {
+        void onPublicationClicked(Publication publication);
+        void onFavoriteClicked(Publication publication, boolean isFavorite);
     }
 }
