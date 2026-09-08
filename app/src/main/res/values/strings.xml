@@ -120,6 +120,16 @@
     <string name="my_publication_paused">Publicación pausada</string>
     <string name="my_publication_reactivated">Publicación reactivada</string>
 
+    <!-- Modo sin conexión (punto 6) -->
+    <string name="offline_banner">Sin conexión · mostrando lo último que se cargó (%1$s). La información puede no estar actualizada.</string>
+    <string name="offline_banner_no_cache">Sin conexión y todavía no hay nada guardado para mostrar.</string>
+    <string name="offline_reconnected">Volvió la conexión, actualizando…</string>
+    <string name="offline_action_needs_connection">Necesitás conexión para hacer esto.</string>
+    <string name="offline_just_now">recién</string>
+    <string name="offline_minutes_ago">hace %1$d min</string>
+    <string name="offline_hours_ago">hace %1$d h</string>
+    <string name="offline_days_ago">hace %1$d días</string>
+
     <plurals name="my_publication_photos">
         <item quantity="one">%d foto</item>
         <item quantity="other">%d fotos</item>
