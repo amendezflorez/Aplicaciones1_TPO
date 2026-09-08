@@ -28,6 +28,14 @@
             android:text="@string/home_welcome" />
 
         <Button
+            android:id="@+id/btnMyProfile"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/home_my_profile"
+            android:textSize="12sp" />
+
+        <Button
             android:id="@+id/btnLogout"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"

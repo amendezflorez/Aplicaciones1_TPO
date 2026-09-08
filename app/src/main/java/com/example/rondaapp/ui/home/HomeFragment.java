@@ -53,6 +53,7 @@ public class HomeFragment extends Fragment {
     private Button btnFilter;
     private TextView tvWelcome;
     private Button btnLogout;
+    private Button btnMyProfile;
     private ProgressBar progressPaging;
 
     // Estados de búsqueda y filtros
@@ -87,6 +88,7 @@ public class HomeFragment extends Fragment {
 
         tvWelcome = view.findViewById(R.id.tvWelcome);
         btnLogout = view.findViewById(R.id.btnLogout);
+        btnMyProfile = view.findViewById(R.id.btnMyProfile);
         rvPublications = view.findViewById(R.id.rvPublications);
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
@@ -101,7 +103,18 @@ public class HomeFragment extends Fragment {
             btnLogout.setOnClickListener(v -> showLogoutConfirmationDialog(view, sessionManager));
         }
 
+        if (btnMyProfile != null) {
+            btnMyProfile.setOnClickListener(v ->
+                    Navigation.findNavController(v).navigate(R.id.action_home_to_myProfile));
+        }
+
         adapter = new PublicationAdapter();
+        // Punto 2: desde la tarjeta se llega al perfil público del vendedor.
+        adapter.setOnSellerClickListener(publication -> {
+            Bundle args = new Bundle();
+            args.putString("userId", publication.getUserId());
+            Navigation.findNavController(view).navigate(R.id.action_home_to_publicProfile, args);
+        });
         layoutManager = new LinearLayoutManager(getContext());
         rvPublications.setLayoutManager(layoutManager);
         rvPublications.setAdapter(adapter);

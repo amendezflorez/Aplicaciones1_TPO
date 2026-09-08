@@ -37,4 +37,32 @@
     <string name="logout_dialog_confirm">Cerrar sesión</string>
     <string name="logout_dialog_cancel">Cancelar</string>
     <string name="logout_success_toast">Sesión cerrada exitosamente</string>
+    <string name="home_my_profile">Mi perfil</string>
+    <string name="publication_seller">Vendedor: %1$s</string>
+
+    <!-- Perfil y reputación -->
+    <string name="profile_my_title">Mis datos</string>
+    <string name="profile_name_hint">Nombre</string>
+    <string name="profile_email_hint">Email</string>
+    <string name="profile_phone_hint">Teléfono de contacto</string>
+    <string name="profile_zone_hint">Zona</string>
+    <string name="profile_save">Guardar cambios</string>
+    <string name="profile_saved">Perfil actualizado</string>
+    <string name="profile_error_empty_name">El nombre no puede quedar vacío</string>
+    <string name="profile_error_load">No pudimos cargar el perfil</string>
+    <string name="profile_error_save">No pudimos guardar los cambios</string>
+
+    <string name="reputation_title">Reputación</string>
+    <string name="reputation_average">%1$s ★</string>
+    <string name="reputation_ratings_count">%1$d calificaciones</string>
+    <string name="reputation_none">Todavía sin calificaciones</string>
+    <string name="reputation_operations">%1$d ventas · %2$d compras</string>
+
+    <string name="public_profile_member_since">Miembro desde %1$s</string>
+    <string name="public_profile_seniority_days">Hace menos de un mes en Ronda</string>
+    <string name="public_profile_seniority_months">%1$d meses en Ronda</string>
+    <string name="public_profile_seniority_years">%1$d año(s) en Ronda</string>
+    <string name="public_profile_zone">Zona: %1$s</string>
+    <string name="public_profile_active_publications">Publicaciones activas (%1$d)</string>
+    <string name="public_profile_no_publications">Este usuario no tiene publicaciones activas</string>
 </resources>

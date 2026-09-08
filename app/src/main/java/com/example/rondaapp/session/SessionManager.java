@@ -39,6 +39,21 @@ public class SessionManager {
         return prefs.getString(KEY_TOKEN, null);
     }
 
+    public String getUserId() {
+        return prefs.getString(KEY_USER_ID, null);
+    }
+
+    /**
+     * Refresca el nombre y el email cacheados después de editar el perfil, para que
+     * el saludo del Home no siga mostrando los datos viejos.
+     */
+    public void updateDatosBasicos(String name, String email) {
+        prefs.edit()
+                .putString(KEY_NAME, name)
+                .putString(KEY_EMAIL, email)
+                .apply();
+    }
+
     public String getEmail() {
         return prefs.getString(KEY_EMAIL, null);
     }

@@ -20,6 +20,34 @@
             android:name="username"
             app:argType="string"
             android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_home_to_myProfile"
+            app:destination="@id/myProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
+    </fragment>
+
+    <!-- Punto 2: perfil propio, con datos personales editables y reputación -->
+    <fragment
+        android:id="@+id/myProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.MyProfileFragment"
+        android:label="Mi perfil"
+        tools:layout="@layout/fragment_my_profile" />
+
+    <!-- Punto 2: perfil público de la otra parte, consultable antes de operar -->
+    <fragment
+        android:id="@+id/publicProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.PublicProfileFragment"
+        android:label="Perfil del vendedor"
+        tools:layout="@layout/fragment_public_profile">
+
+        <argument
+            android:name="userId"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
 </navigation>

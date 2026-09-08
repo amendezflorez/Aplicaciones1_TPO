@@ -169,48 +169,54 @@ app.get('/api/publications', async (req, res) => {
   } = req.query;
 
   // El WHERE se arma una sola vez y se reutiliza para el COUNT del total,
-  // asi el cliente sabe cuando dejar de pedir paginas.
-  let whereClause = ' WHERE 1=1';
+  // asi el cliente sabe cuando dejar de pedir paginas. Las columnas van
+  // calificadas con "p." porque el JOIN con users trae otra columna "zone".
+  let whereClause = " WHERE p.status = 'activa'";
   const filterParams = [];
 
   if (search) {
-    whereClause += ' AND (title LIKE ? OR description LIKE ?)';
+    whereClause += ' AND (p.title LIKE ? OR p.description LIKE ?)';
     filterParams.push(`%${search}%`, `%${search}%`);
   }
   if (category) {
-    whereClause += ' AND category = ?';
+    whereClause += ' AND p.category = ?';
     filterParams.push(category);
   }
   if (condition) {
-    whereClause += ' AND condition = ?';
+    whereClause += ' AND p.condition = ?';
     filterParams.push(condition);
   }
   if (zone) {
-    whereClause += ' AND zone = ?';
+    whereClause += ' AND p.zone = ?';
     filterParams.push(zone);
   }
   if (minPrice) {
-    whereClause += ' AND price >= ?';
+    whereClause += ' AND p.price >= ?';
     filterParams.push(Number(minPrice));
   }
   if (maxPrice) {
-    whereClause += ' AND price <= ?';
+    whereClause += ' AND p.price <= ?';
     filterParams.push(Number(maxPrice));
   }
 
   const sortMap = {
-    'price_asc': 'price ASC',
-    'price_desc': 'price DESC',
-    'recent': 'created_at DESC'
+    'price_asc': 'p.price ASC',
+    'price_desc': 'p.price DESC',
+    'recent': 'p.created_at DESC'
   };
-  const orderByClause = sortMap[sortBy] || 'created_at DESC';
+  const orderByClause = sortMap[sortBy] || 'p.created_at DESC';
 
   const limitNum = Math.max(1, parseInt(limit, 10) || 10);
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const offset = (pageNum - 1) * limitNum;
 
-  const listQuery = `SELECT * FROM publications${whereClause} ORDER BY ${orderByClause} LIMIT ? OFFSET ?`;
-  const countQuery = `SELECT COUNT(*) AS total FROM publications${whereClause}`;
+  // seller_name viaja en el listado para poder abrir el perfil publico del
+  // vendedor desde la tarjeta (punto 2: consultar a la otra parte antes de operar).
+  const listQuery = `SELECT p.*, u.name AS seller_name
+                     FROM publications p
+                     LEFT JOIN users u ON u.id = p.user_id${whereClause}
+                     ORDER BY ${orderByClause} LIMIT ? OFFSET ?`;
+  const countQuery = `SELECT COUNT(*) AS total FROM publications p${whereClause}`;
 
   try {
     const rows = await db.all(listQuery, [...filterParams, limitNum, offset]);
@@ -228,9 +234,167 @@ app.get('/api/publications', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`===================================================`);
-  console.log(`✅ Backend Unificado de Ronda corriendo en http://localhost:${PORT}`);
-  console.log(`📲 Base URL para Android Emulator: http://10.0.2.2:${PORT}/api/`);
-  console.log(`===================================================`);
+// ==========================================
+// 3. ENDPOINTS DE PERFIL Y REPUTACION
+// ==========================================
+
+/**
+ * Reputacion de un usuario, derivada de las calificaciones recibidas:
+ * promedio de estrellas y cantidad de operaciones concretadas en cada rol.
+ */
+async function getReputation(userId) {
+  const row = await db.get(
+    `SELECT COUNT(*) AS totalRatings,
+            AVG(stars) AS average,
+            SUM(CASE WHEN role = 'vendedor'  THEN 1 ELSE 0 END) AS salesCount,
+            SUM(CASE WHEN role = 'comprador' THEN 1 ELSE 0 END) AS purchasesCount
+       FROM ratings
+      WHERE rated_user_id = ?`,
+    [userId]
+  );
+
+  return {
+    // Se redondea a un decimal para que el cliente muestre "4.5" sin hacer cuentas.
+    average: row && row.average ? Math.round(row.average * 10) / 10 : 0,
+    totalRatings: (row && row.totalRatings) || 0,
+    salesCount: (row && row.salesCount) || 0,
+    purchasesCount: (row && row.purchasesCount) || 0
+  };
+}
+
+// Perfil de un usuario: datos personales + reputacion + publicaciones activas.
+app.get('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await db.get(
+      'SELECT id, name, email, phone, zone, created_at FROM users WHERE id = ?',
+      [id]
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    const reputation = await getReputation(id);
+    const activePublications = await db.all(
+      `SELECT * FROM publications
+        WHERE user_id = ? AND status = 'activa'
+        ORDER BY created_at DESC`,
+      [id]
+    );
+
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      zone: user.zone,
+      // "Antiguedad en la plataforma" se calcula en el cliente a partir de esta fecha.
+      createdAt: user.created_at,
+      reputation,
+      activePublications
+    });
+  } catch (error) {
+    console.error('Error en GET /api/users/:id', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
+
+// Editar los datos personales del perfil.
+app.put('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, email, phone, zone } = req.body;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'El nombre no puede quedar vacío' });
+  }
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'El email no es válido' });
+  }
+
+  try {
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // El email es UNIQUE: se avisa con 409 en vez de dejar explotar el constraint.
+    if (email) {
+      const enUso = await db.get('SELECT id FROM users WHERE email = ? AND id <> ?', [email, id]);
+      if (enUso) {
+        return res.status(409).json({ success: false, message: 'Ese email ya está en uso' });
+      }
+    }
+
+    await db.run(
+      'UPDATE users SET name = ?, email = ?, phone = ?, zone = ? WHERE id = ?',
+      [name.trim(), email || null, phone || null, zone || null, id]
+    );
+
+    const actualizado = await db.get(
+      'SELECT id, name, email, phone, zone, created_at FROM users WHERE id = ?',
+      [id]
+    );
+
+    res.json({
+      id: actualizado.id,
+      name: actualizado.name,
+      email: actualizado.email,
+      phone: actualizado.phone,
+      zone: actualizado.zone,
+      createdAt: actualizado.created_at,
+      reputation: await getReputation(id),
+      activePublications: []
+    });
+  } catch (error) {
+    console.error('Error en PUT /api/users/:id', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Calificar a un usuario. La reputacion sale de aca; emitir la calificacion al
+// cerrar una operacion es parte del flujo de los puntos 4 y 5.
+app.post('/api/users/:id/ratings', async (req, res) => {
+  const { id } = req.params;
+  const { stars, role, comment, raterUserId } = req.body;
+
+  const estrellas = parseInt(stars, 10);
+  if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
+    return res.status(400).json({ success: false, message: 'Las estrellas deben ir de 1 a 5' });
+  }
+  if (role !== 'vendedor' && role !== 'comprador') {
+    return res.status(400).json({ success: false, message: "El rol debe ser 'vendedor' o 'comprador'" });
+  }
+
+  try {
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    await db.run(
+      'INSERT INTO ratings (rated_user_id, rater_user_id, stars, role, comment) VALUES (?, ?, ?, ?, ?)',
+      [id, raterUserId || null, estrellas, role, comment || null]
+    );
+
+    res.status(201).json({ success: true, reputation: await getReputation(id) });
+  } catch (error) {
+    console.error('Error en POST /api/users/:id/ratings', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Se espera a que el esquema termine de migrar antes de atender pedidos.
+db.ready
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`===================================================`);
+      console.log(`✅ Backend Unificado de Ronda corriendo en http://localhost:${PORT}`);
+      console.log(`📲 Base URL para Android Emulator: http://10.0.2.2:${PORT}/api/`);
+      console.log(`===================================================`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ No se pudo inicializar la base, el servidor no arranca:', err.message);
+    process.exit(1);
+  });
