@@ -20,7 +20,9 @@ import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.OtpRequestBody;
 import com.example.rondaapp.data.model.SimpleResponse;
 import com.example.rondaapp.data.network.ApiService;
-import com.example.rondaapp.data.network.RetrofitClient;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -29,7 +31,11 @@ import retrofit2.Response;
 /**
  * Paso 1 del flujo OTP: solicitar código de verificación por email.
  */
+@AndroidEntryPoint
 public class EmailAuthFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private static final String TAG = "EmailAuthFragment";
 
@@ -59,8 +65,6 @@ public class EmailAuthFragment extends Fragment {
 
             progressEmailAuth.setVisibility(View.VISIBLE);
             btnSendCode.setEnabled(false);
-
-            ApiService apiService = RetrofitClient.getApiService();
 
             apiService.requestOtp(new OtpRequestBody(email))
                     .enqueue(new Callback<SimpleResponse>() {

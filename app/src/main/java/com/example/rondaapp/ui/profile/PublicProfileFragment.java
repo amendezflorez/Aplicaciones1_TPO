@@ -17,8 +17,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.UserProfile;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.ui.home.PublicationAdapter;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import java.util.List;
 
@@ -31,7 +34,11 @@ import retrofit2.Response;
  * Muestra su reputación, su antigüedad en la plataforma y sus publicaciones
  * activas.
  */
+@AndroidEntryPoint
 public class PublicProfileFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     /** Id del usuario a mostrar; llega como argumento de navegación. */
     static final String ARG_USER_ID = "userId";
@@ -82,7 +89,7 @@ public class PublicProfileFragment extends Fragment {
         }
 
         progressPublicProfile.setVisibility(View.VISIBLE);
-        RetrofitClient.getApiService().getUserProfile(userId).enqueue(new Callback<UserProfile>() {
+        apiService.getUserProfile(userId).enqueue(new Callback<UserProfile>() {
             @Override
             public void onResponse(@NonNull Call<UserProfile> call, @NonNull Response<UserProfile> response) {
                 if (!isAdded() || getView() == null) return;

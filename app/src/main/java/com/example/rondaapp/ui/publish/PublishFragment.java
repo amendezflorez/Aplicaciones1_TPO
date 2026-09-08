@@ -31,8 +31,11 @@ import androidx.navigation.Navigation;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.CreatePublicationBody;
 import com.example.rondaapp.data.model.Publication;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,7 +52,11 @@ import retrofit2.Response;
  * persona sale de la app a mitad de camino, al volver retoma en el mismo paso
  * con los datos y las fotos que había cargado.
  */
+@AndroidEntryPoint
 public class PublishFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     private static final int CANTIDAD_PASOS = 3;
     private static final int MAX_FOTOS = 5;
@@ -382,7 +389,7 @@ public class PublishFragment extends Fragment {
                 userId, draft.titulo, draft.descripcion, precio,
                 draft.condicion, draft.categoria, draft.zona, fotosBase64);
 
-        RetrofitClient.getApiService().createPublication(body).enqueue(new Callback<Publication>() {
+        apiService.createPublication(body).enqueue(new Callback<Publication>() {
             @Override
             public void onResponse(@NonNull Call<Publication> call, @NonNull Response<Publication> response) {
                 if (!isAdded() || getView() == null) return;

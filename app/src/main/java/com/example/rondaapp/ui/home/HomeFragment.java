@@ -29,8 +29,11 @@ import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.local.OfflineCache;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+
+import dagger.hilt.android.AndroidEntryPoint;
+import javax.inject.Inject;
 
 import java.util.List;
 
@@ -41,7 +44,11 @@ import retrofit2.Response;
 /**
  * Pantalla principal del Home con exploración de publicaciones, buscador, filtros, ordenamiento y cierre de sesión.
  */
+@AndroidEntryPoint
 public class HomeFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
 
     /** Cantidad de publicaciones que se piden por página. */
     private static final int PAGE_SIZE = 20;
@@ -386,7 +393,7 @@ public class HomeFragment extends Fragment {
         isLoading = true;
         mostrarProgreso(!reset);
 
-        RetrofitClient.getApiService().getPublications(
+        apiService.getPublications(
                 currentSearch,
                 selectedCategory,
                 selectedCondition,
