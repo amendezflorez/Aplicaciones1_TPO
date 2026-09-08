@@ -6,7 +6,9 @@ const { zonasCercanas } = require('./zones');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Las fotos viajan en base64 dentro del JSON, y el limite por defecto de
+// express es 100kb: con una sola foto ya se pasa.
+app.use(express.json({ limit: '12mb' }));
 
 const PORT = process.env.PORT || 8080;
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de validez
@@ -232,7 +234,9 @@ app.get('/api/publications', async (req, res) => {
 
   // seller_name viaja en el listado para poder abrir el perfil publico del
   // vendedor desde la tarjeta (punto 2: consultar a la otra parte antes de operar).
-  const listQuery = `SELECT p.*, u.name AS seller_name
+  const listQuery = `SELECT p.*, u.name AS seller_name,
+                            (SELECT COUNT(*) FROM publication_photos ph
+                              WHERE ph.publication_id = p.id) AS photo_count
                      FROM publications p
                      LEFT JOIN users u ON u.id = p.user_id${whereClause}
                      ORDER BY ${orderByClause} LIMIT ? OFFSET ?`;
@@ -251,6 +255,122 @@ app.get('/api/publications', async (req, res) => {
   } catch (error) {
     console.error('Error al consultar publicaciones:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// 2b. PUBLICAR Y GESTIONAR PUBLICACIONES (PUNTO 5)
+// ==========================================
+
+const ESTADOS_VALIDOS = ['activa', 'pausada', 'vendida'];
+const CONDICIONES_VALIDAS = ['nuevo', 'como nuevo', 'usado'];
+const MAX_FOTOS = 5;
+
+// Crear una publicacion, con sus fotos.
+app.post('/api/publications', async (req, res) => {
+  const { userId, title, description, price, condition, category, zone, photos } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: 'Falta el usuario que publica' });
+  }
+  if (!title || !title.trim()) {
+    return res.status(400).json({ success: false, message: 'El título es obligatorio' });
+  }
+  const precio = Number(price);
+  if (!Number.isFinite(precio) || precio < 0) {
+    return res.status(400).json({ success: false, message: 'El precio no es válido' });
+  }
+  if (!CONDICIONES_VALIDAS.includes(condition)) {
+    return res.status(400).json({ success: false, message: 'El estado del artículo no es válido' });
+  }
+  const fotos = Array.isArray(photos) ? photos : [];
+  if (fotos.length > MAX_FOTOS) {
+    return res.status(400).json({ success: false, message: `Como máximo ${MAX_FOTOS} fotos` });
+  }
+
+  try {
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    const insert = await db.run(
+      `INSERT INTO publications (title, description, price, condition, category, zone, user_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'activa')`,
+      [title.trim(), description || null, precio, condition, category || null, zone || null, userId]
+    );
+
+    for (let i = 0; i < fotos.length; i++) {
+      await db.run(
+        'INSERT INTO publication_photos (publication_id, data, position) VALUES (?, ?, ?)',
+        [insert.lastID, fotos[i], i]
+      );
+    }
+
+    const creada = await db.get('SELECT * FROM publications WHERE id = ?', [insert.lastID]);
+    res.status(201).json({ ...creada, photo_count: fotos.length });
+  } catch (error) {
+    console.error('Error en POST /api/publications', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// "Mis publicaciones": todas las del usuario, en cualquier estado.
+// Se diferencia del perfil publico, que solo lista las activas.
+app.get('/api/users/:id/publications', async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT p.*, (SELECT COUNT(*) FROM publication_photos ph
+                     WHERE ph.publication_id = p.id) AS photo_count
+         FROM publications p
+        WHERE p.user_id = ?
+        ORDER BY p.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/users/:id/publications', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Pausar / reactivar / marcar vendida.
+app.patch('/api/publications/:id/status', async (req, res) => {
+  const { status } = req.body;
+
+  if (!ESTADOS_VALIDOS.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `El estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}`
+    });
+  }
+
+  try {
+    const publicacion = await db.get('SELECT * FROM publications WHERE id = ?', [req.params.id]);
+    if (!publicacion) {
+      return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+    }
+
+    await db.run('UPDATE publications SET status = ? WHERE id = ?', [status, req.params.id]);
+    res.json({ ...publicacion, status });
+  } catch (error) {
+    console.error('Error en PATCH /api/publications/:id/status', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Fotos de una publicacion. Endpoint aparte a proposito: los listados no
+// arrastran base64. El detalle del punto 4 consume este mismo endpoint.
+app.get('/api/publications/:id/photos', async (req, res) => {
+  try {
+    const rows = await db.all(
+      'SELECT id, data, position FROM publication_photos WHERE publication_id = ? ORDER BY position',
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/photos', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

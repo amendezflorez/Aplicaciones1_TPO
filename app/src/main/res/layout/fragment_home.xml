@@ -28,20 +28,46 @@
             android:text="@string/home_welcome" />
 
         <Button
-            android:id="@+id/btnMyProfile"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/home_my_profile"
-            android:textSize="12sp" />
-
-        <Button
             android:id="@+id/btnLogout"
             style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/home_logout"
             android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Accesos a perfil (punto 2) y a publicar / mis publicaciones (punto 5) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnMyProfile"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_my_profile"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnPublish"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_publish"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnMyPublications"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_my_publications"
+            android:textSize="11sp" />
     </LinearLayout>
 
     <!-- Buscador + Botón de Filtros -->

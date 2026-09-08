@@ -55,6 +55,8 @@ public class HomeFragment extends Fragment {
     private TextView tvWelcome;
     private Button btnLogout;
     private Button btnMyProfile;
+    private Button btnPublish;
+    private Button btnMyPublications;
     private ProgressBar progressPaging;
     private SessionManager sessionManager;
 
@@ -93,6 +95,8 @@ public class HomeFragment extends Fragment {
         tvWelcome = view.findViewById(R.id.tvWelcome);
         btnLogout = view.findViewById(R.id.btnLogout);
         btnMyProfile = view.findViewById(R.id.btnMyProfile);
+        btnPublish = view.findViewById(R.id.btnPublish);
+        btnMyPublications = view.findViewById(R.id.btnMyPublications);
         rvPublications = view.findViewById(R.id.rvPublications);
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
@@ -110,6 +114,17 @@ public class HomeFragment extends Fragment {
         if (btnMyProfile != null) {
             btnMyProfile.setOnClickListener(v ->
                     Navigation.findNavController(v).navigate(R.id.action_home_to_myProfile));
+        }
+
+        // Punto 5: dos entradas distintas, el formulario y la lista.
+        if (btnPublish != null) {
+            btnPublish.setOnClickListener(v ->
+                    Navigation.findNavController(v).navigate(R.id.action_home_to_publish));
+        }
+
+        if (btnMyPublications != null) {
+            btnMyPublications.setOnClickListener(v ->
+                    Navigation.findNavController(v).navigate(R.id.action_home_to_myPublications));
         }
 
         adapter = new PublicationAdapter();
