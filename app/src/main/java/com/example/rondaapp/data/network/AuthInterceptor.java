@@ -13,9 +13,11 @@ import okhttp3.Response;
 /**
  * Adjunta el token de la sesión a cada request como header Authorization.
  *
- * Antes el token se guardaba en {@link SessionManager} y no salía nunca de ahí.
  * Los requests de login y OTP pasan de largo sin header, porque justamente
  * corren cuando todavía no hay sesión.
+ *
+ * Si el backend responde 401, el token dejó de valer del otro lado: se limpia
+ * la sesión local para que la app vuelva al Login en vez de insistir con él.
  */
 public class AuthInterceptor implements Interceptor {
 
@@ -35,8 +37,17 @@ public class AuthInterceptor implements Interceptor {
             return chain.proceed(original);
         }
 
-        return chain.proceed(original.newBuilder()
+        Response response = chain.proceed(original.newBuilder()
                 .header("Authorization", "Bearer " + token)
                 .build());
+
+        if (response.code() == 401) {
+            // El backend no reconoce el token: la sesion murio del otro lado, asi
+            // que guardarla aca ya no sirve de nada. Al proximo arranque la app
+            // cae en el Login en vez de reintentar con un token muerto.
+            sessionManager.clear();
+        }
+
+        return response;
     }
 }

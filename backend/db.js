@@ -58,6 +58,16 @@ const CREATE_TABLES = [
       expires_at INTEGER NOT NULL
     )`,
 
+  // El token que devuelven login y OTP se guarda aca. Antes era un randomUUID()
+  // que no se comparaba contra nada, asi que el header Authorization que manda
+  // la app no se podia validar.
+  `CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`,
+
   `CREATE TABLE IF NOT EXISTS publications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
