@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
 const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
 const db = require('./db');
 const { zonasCercanas } = require('./zones');
 
@@ -19,22 +20,39 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/** Emite el token de sesion y lo persiste, que es lo que permite validarlo despues. */
-async function crearSesion(userId) {
-  const token = randomUUID();
-  await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, userId]);
-  return token;
+// ==========================================
+// AUTENTICACION CON JWT
+// ==========================================
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+// Sin secreto no se arranca. Poner uno por defecto en el codigo seria peor que
+// no tener JWT: cualquiera que lea el repo podria firmar tokens validos.
+if (!JWT_SECRET) {
+  console.error('❌ Falta JWT_SECRET en el .env. Ver backend/README.md.');
+  process.exit(1);
 }
 
 /**
- * Exige el header "Authorization: Bearer <token>" que manda la app y lo busca
- * en la tabla de sesiones. Deja pasar solo si existe, y cuelga el dueno en
- * req.userId para que la ruta sepa quien esta llamando.
+ * Emite el token de sesion como JWT firmado.
+ *
+ * El token es autocontenido: lleva el id del usuario en "sub" y su vencimiento
+ * en "exp", asi que validarlo no requiere ir a la base.
+ */
+function crearSesion(userId) {
+  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+/**
+ * Exige el header "Authorization: Bearer <token>" que manda la app y verifica
+ * la firma del JWT. Cuelga el dueno en req.userId para que la ruta sepa quien
+ * esta llamando.
  *
  * No se aplica a /api/health ni a /api/auth/*: son justamente las rutas que se
  * usan cuando todavia no hay sesion.
  */
-async function requireAuth(req, res, next) {
+function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null;
 
@@ -43,15 +61,18 @@ async function requireAuth(req, res, next) {
   }
 
   try {
-    const sesion = await db.get('SELECT user_id FROM sessions WHERE token = ?', [token]);
-    if (!sesion) {
-      return res.status(401).json({ success: false, message: 'Sesion invalida o expirada' });
-    }
-    req.userId = sesion.user_id;
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.userId = payload.sub;
     next();
   } catch (error) {
-    console.error('Error validando la sesion:', error);
-    res.status(500).json({ success: false, message: error.message });
+    // Se distingue vencido de invalido para que el cliente pueda decidir si
+    // reintentar el login o avisar que algo raro pasa. Ambos son 401.
+    const vencido = error.name === 'TokenExpiredError';
+    return res.status(401).json({
+      success: false,
+      expired: vencido,
+      message: vencido ? 'La sesion expiro, volve a iniciar sesion' : 'Token invalido'
+    });
   }
 }
 
@@ -119,7 +140,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
     }
 
-    const token = await crearSesion(user.id);
+    const token = crearSesion(user.id);
     res.json({
       token,
       userId: user.id,
@@ -212,7 +233,7 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 
     await db.run('DELETE FROM otp_codes WHERE email = ?', [email]);
 
-    const token = await crearSesion(user.id);
+    const token = crearSesion(user.id);
     res.json({
       token,
       userId: user.id,

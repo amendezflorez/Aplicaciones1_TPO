@@ -58,16 +58,6 @@ const CREATE_TABLES = [
       expires_at INTEGER NOT NULL
     )`,
 
-  // El token que devuelven login y OTP se guarda aca. Antes era un randomUUID()
-  // que no se comparaba contra nada, asi que el header Authorization que manda
-  // la app no se podia validar.
-  `CREATE TABLE IF NOT EXISTS sessions (
-      token TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users (id)
-    )`,
-
   `CREATE TABLE IF NOT EXISTS publications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -253,6 +243,11 @@ async function init() {
   await dbAsync.run(
     'CREATE INDEX IF NOT EXISTS idx_offers_publication ON offers (publication_id, created_at)'
   );
+
+  // El token paso de ser un UUID guardado en "sessions" a un JWT firmado, que
+  // se valida por firma sin tocar la base. La tabla quedo sin uso: se descarta
+  // para que no queden dos mecanismos de sesion conviviendo.
+  await dbAsync.run('DROP TABLE IF EXISTS sessions');
 
   await seedPublications();
   await seedUsersAndRatings();

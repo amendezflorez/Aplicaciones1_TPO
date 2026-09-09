@@ -14,29 +14,45 @@ npm start
 El servidor arranca en `http://localhost:8080`.
 Base URL para el emulador de Android: `http://10.0.2.2:8080/api/`.
 
-## Configuración del `.env` (obligatorio para el envío de OTP)
+## Configuración del `.env` (obligatorio)
 
-El login por OTP manda el código por mail usando una cuenta de Gmail. Las
-credenciales **no se suben al repo** (el `.env` está en el `.gitignore`), así que
-cada integrante tiene que crear el suyo.
+Las credenciales y el secreto de firma **no se suben al repo** (el `.env` está en
+el `.gitignore`), así que cada integrante tiene que crear el suyo.
 
 1. Crear un archivo llamado `.env` dentro de la carpeta `backend` (al lado de `server.js`).
-2. Pegar estas tres líneas y completar con datos propios:
+2. Pegar estas líneas y completar con datos propios:
 
 ```
 GMAIL_USER=tumail@gmail.com
 GMAIL_PASS=las16letrassinespacios
 MAIL_FROM=Ronda <tumail@gmail.com>
+JWT_SECRET=pegar-aca-el-secreto-generado
+JWT_EXPIRES_IN=7d
 ```
 
 - `GMAIL_USER`: la dirección de Gmail completa.
 - `GMAIL_PASS`: la contraseña de aplicación de 16 caracteres (ver abajo cómo obtenerla), **sin espacios**.
 - `MAIL_FROM`: lo que ve el usuario como remitente. Se puede dejar "Ronda".
+- `JWT_SECRET`: con lo que se firman los tokens de sesión. Generar uno propio con:
+
+  ```
+  node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+  ```
+
+- `JWT_EXPIRES_IN`: cuánto dura la sesión (`7d`, `12h`, `30m`…). Si no está, son 7 días.
 
 > Sin comillas y sin espacios alrededor del `=`.
 
-Si el `.env` no está o le falta la contraseña, el servidor igual arranca y el
-código OTP se sigue viendo en la consola, pero no se manda el mail.
+**El servidor no arranca sin `JWT_SECRET`**, y lo dice en la consola. Es a
+propósito: dejar un secreto por defecto en el código sería peor que no tener
+JWT, porque cualquiera que lea el repo podría firmar tokens válidos.
+
+Si falta la contraseña de Gmail el servidor igual arranca, y el código OTP se
+sigue viendo en la consola aunque no se mande el mail.
+
+Cambiar el `JWT_SECRET` invalida todas las sesiones abiertas: los usuarios
+tienen que volver a loguearse. Cada integrante con su propio secreto es lo
+esperado, porque cada uno corre su backend contra su base.
 
 ## Cómo obtener el `GMAIL_PASS` (contraseña de aplicación)
 
