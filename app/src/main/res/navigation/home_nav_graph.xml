@@ -31,15 +31,15 @@
 
         <action
             android:id="@+id/action_home_to_detallePublicacion"
-            app:destination="@id/detallePublicacionFragment" />
+            app:destination="@id/publicationDetailFragment" />
     </fragment>
 
     <!-- Punto 4: Detalle de Publicación -->
     <fragment
-        android:id="@+id/detallePublicacionFragment"
-        android:name="com.example.rondaapp.ui.home.DetallePublicacionFragment"
+        android:id="@+id/publicationDetailFragment"
+        android:name="com.example.rondaapp.ui.home.PublicationDetailFragment"
         android:label="Detalle de Publicación"
-        tools:layout="@layout/fragment_detalle_publicacion">
+        tools:layout="@layout/fragment_publication_detail">
         <argument
             android:name="publicationId"
             app:argType="integer" />
