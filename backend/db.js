@@ -93,6 +93,32 @@ const CREATE_TABLES = [
       FOREIGN KEY (rated_user_id) REFERENCES users (id)
     )`,
 
+  // Punto 4: las preguntas que deja un interesado en la publicacion. El TP
+  // pide que el interesado pueda "preguntar"; responder queda para el vendedor
+  // desde la gestion de su publicacion.
+  `CREATE TABLE IF NOT EXISTS questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      publication_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`,
+
+  // Punto 4: las ofertas de precio. "status" queda listo para aceptar/rechazar,
+  // que el TP no pide todavia pero es la continuacion natural.
+  `CREATE TABLE IF NOT EXISTS offers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      publication_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendiente',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )`,
+
   // Punto 5: las fotos del articulo. Se guardan como data URI en base64 para
   // no necesitar un servidor de archivos aparte; por eso NUNCA se devuelven
   // en los listados, solo por GET /api/publications/:id/photos.
@@ -219,6 +245,13 @@ async function init() {
 
   await dbAsync.run(
     'CREATE INDEX IF NOT EXISTS idx_photos_publication ON publication_photos (publication_id, position)'
+  );
+
+  await dbAsync.run(
+    'CREATE INDEX IF NOT EXISTS idx_questions_publication ON questions (publication_id, created_at)'
+  );
+  await dbAsync.run(
+    'CREATE INDEX IF NOT EXISTS idx_offers_publication ON offers (publication_id, created_at)'
   );
 
   await seedPublications();

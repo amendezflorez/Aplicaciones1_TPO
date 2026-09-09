@@ -30,7 +30,18 @@ public class MyPublicationAdapter extends RecyclerView.Adapter<MyPublicationAdap
     }
 
     private List<Publication> publications = new ArrayList<>();
+    /** Aviso de que se tocó la tarjeta, para abrir el detalle (punto 4). */
+    public interface OnDetailClickListener {
+        void onDetailClick(Publication publication);
+    }
+
     private final OnToggleStatusListener listener;
+    private OnDetailClickListener detailClickListener;
+
+    /** Si no se setea, la tarjeta se muestra pero no abre el detalle. */
+    public void setOnDetailClickListener(OnDetailClickListener detailClickListener) {
+        this.detailClickListener = detailClickListener;
+    }
 
     public MyPublicationAdapter(OnToggleStatusListener listener) {
         this.listener = listener;
@@ -72,6 +83,9 @@ public class MyPublicationAdapter extends RecyclerView.Adapter<MyPublicationAdap
         holder.btnToggle.setText(pausada
                 ? R.string.my_publication_reactivate
                 : R.string.my_publication_pause);
+        holder.itemView.setOnClickListener(detailClickListener == null ? null
+                : v -> detailClickListener.onDetailClick(pub));
+
         holder.btnToggle.setOnClickListener(v -> listener.onToggleStatus(pub,
                 pausada ? PublicationStatusBody.ACTIVA : PublicationStatusBody.PAUSADA));
     }

@@ -429,6 +429,164 @@ app.patch('/api/publications/:id/status', requireAuth, async (req, res) => {
 
 // Fotos de una publicacion. Endpoint aparte a proposito: los listados no
 // arrastran base64. El detalle del punto 4 consume este mismo endpoint.
+// ==========================================
+// 2.b DETALLE DE LA PUBLICACION (PUNTO 4)
+// ==========================================
+
+/** Trae la publicacion con su vendedor, o null si no existe. */
+async function getPublicacionConVendedor(id) {
+  const publication = await db.get(
+    `SELECT p.*,
+            u.name AS seller_name,
+            (SELECT COUNT(*) FROM publication_photos WHERE publication_id = p.id) AS photo_count
+       FROM publications p
+       LEFT JOIN users u ON u.id = p.user_id
+      WHERE p.id = ?`,
+    [id]
+  );
+  return publication || null;
+}
+
+// Detalle completo: la publicacion mas los datos del vendedor con su reputacion,
+// que es lo que permite decidir si conviene operar sin salir de la pantalla.
+app.get('/api/publications/:id', requireAuth, async (req, res) => {
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+
+    let seller = null;
+    if (publication.user_id) {
+      const usuario = await db.get(
+        'SELECT id, name, zone, created_at FROM users WHERE id = ?',
+        [publication.user_id]
+      );
+      if (usuario) {
+        seller = { ...usuario, reputation: await getReputation(usuario.id) };
+      }
+    }
+
+    res.json({ publication, seller });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Preguntas de la publicacion. Las ve cualquiera que mire el detalle: son
+// publicas, como en cualquier marketplace.
+app.get('/api/publications/:id/questions', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT q.id, q.text, q.created_at, q.user_id, u.name AS user_name
+         FROM questions q
+         LEFT JOIN users u ON u.id = q.user_id
+        WHERE q.publication_id = ?
+        ORDER BY q.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/questions', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/publications/:id/questions', requireAuth, async (req, res) => {
+  const texto = (req.body.text || '').trim();
+  if (!texto) {
+    return res.status(400).json({ success: false, message: 'La pregunta no puede estar vacia' });
+  }
+
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    // El duenio gestiona su publicacion; preguntar es la accion del interesado.
+    if (publication.user_id === req.userId) {
+      return res.status(400).json({ success: false, message: 'No podes preguntar en tu propia publicacion' });
+    }
+
+    const { lastID } = await db.run(
+      'INSERT INTO questions (publication_id, user_id, text) VALUES (?, ?, ?)',
+      [publication.id, req.userId, texto]
+    );
+    const creada = await db.get(
+      `SELECT q.id, q.text, q.created_at, q.user_id, u.name AS user_name
+         FROM questions q LEFT JOIN users u ON u.id = q.user_id
+        WHERE q.id = ?`,
+      [lastID]
+    );
+    res.status(201).json(creada);
+  } catch (error) {
+    console.error('Error en POST /api/publications/:id/questions', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Las ofertas las ve solo el vendedor: son parte de la gestion de su publicacion.
+app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    if (publication.user_id !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Solo el vendedor ve las ofertas' });
+    }
+
+    const rows = await db.all(
+      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o
+         LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.publication_id = ?
+        ORDER BY o.amount DESC, o.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
+  const monto = Number(req.body.amount);
+  if (!Number.isFinite(monto) || monto <= 0) {
+    return res.status(400).json({ success: false, message: 'El monto ofertado no es valido' });
+  }
+
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    if (publication.user_id === req.userId) {
+      return res.status(400).json({ success: false, message: 'No podes ofertar en tu propia publicacion' });
+    }
+    if (publication.status !== 'activa') {
+      return res.status(400).json({ success: false, message: 'La publicacion no esta activa' });
+    }
+
+    const { lastID } = await db.run(
+      'INSERT INTO offers (publication_id, user_id, amount) VALUES (?, ?, ?)',
+      [publication.id, req.userId, monto]
+    );
+    const creada = await db.get(
+      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.id = ?`,
+      [lastID]
+    );
+    res.status(201).json(creada);
+  } catch (error) {
+    console.error('Error en POST /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 app.get('/api/publications/:id/photos', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(

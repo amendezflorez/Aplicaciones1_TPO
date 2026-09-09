@@ -134,4 +134,40 @@
         <item quantity="one">%d foto</item>
         <item quantity="other">%d fotos</item>
     </plurals>
+
+    <!-- Punto 4: detalle de la publicación -->
+    <string name="detail_title">Detalle de la publicación</string>
+    <string name="detail_loading_error">No pudimos cargar la publicación</string>
+    <string name="detail_no_photos">Esta publicación no tiene fotos</string>
+    <string name="detail_photo_position">%1$d de %2$d</string>
+    <string name="detail_description_label">Descripción</string>
+    <string name="detail_no_description">Sin descripción</string>
+    <string name="detail_published_on">Publicado el %1$s</string>
+    <string name="detail_category">Categoría: %1$s</string>
+    <string name="detail_status">Estado de la publicación: %1$s</string>
+    <string name="detail_seller_label">Vendedor</string>
+    <string name="detail_view_profile">Ver perfil público</string>
+    <string name="detail_ask">Preguntar</string>
+    <string name="detail_offer">Ofertar</string>
+    <string name="detail_ask_title">Preguntar al vendedor</string>
+    <string name="detail_ask_hint">Escribí tu pregunta</string>
+    <string name="detail_ask_sent">Pregunta enviada</string>
+    <string name="detail_ask_error">No pudimos enviar tu pregunta</string>
+    <string name="detail_offer_title">Hacer una oferta</string>
+    <string name="detail_offer_hint">Monto que ofrecés</string>
+    <string name="detail_offer_sent">Oferta enviada</string>
+    <string name="detail_offer_error">No pudimos enviar tu oferta</string>
+    <string name="detail_offer_invalid">Ingresá un monto válido</string>
+    <string name="detail_send">Enviar</string>
+    <string name="detail_cancel">Cancelar</string>
+    <string name="detail_questions_title">Preguntas (%1$d)</string>
+    <string name="detail_no_questions">Todavía no hay preguntas.</string>
+    <string name="detail_question_author">%1$s · %2$s</string>
+    <string name="detail_offers_title">Ofertas recibidas (%1$d)</string>
+    <string name="detail_no_offers">Todavía no recibiste ofertas.</string>
+    <string name="detail_offer_row">%1$s ofertó $ %2$s</string>
+    <string name="detail_mark_sold">Marcar vendida</string>
+    <string name="detail_sold">Publicación marcada como vendida</string>
+    <string name="detail_status_error">No pudimos cambiar el estado</string>
+    <string name="detail_offline">Sin conexión · estás viendo lo último que se guardó de esta publicación.</string>
 </resources>

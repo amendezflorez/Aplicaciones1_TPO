@@ -31,6 +31,7 @@ import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+import com.example.rondaapp.ui.detail.PublicationDetailFragment;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import javax.inject.Inject;
@@ -155,6 +156,14 @@ public class HomeFragment extends Fragment {
             Bundle args = new Bundle();
             args.putString("userId", publication.getUserId());
             Navigation.findNavController(view).navigate(R.id.action_home_to_publicProfile, args);
+        });
+
+        adapter.setOnPublicationClickListener(publication -> {
+            // Sin conexión el detalle igual abre: muestra lo último que se guardó de
+            // esa publicación, que es lo que pide el punto 6.
+            Bundle args = new Bundle();
+            args.putInt(PublicationDetailFragment.ARG_PUBLICATION_ID, publication.getId());
+            Navigation.findNavController(view).navigate(R.id.action_home_to_detail, args);
         });
         layoutManager = new LinearLayoutManager(getContext());
         rvPublications.setLayoutManager(layoutManager);
