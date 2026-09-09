@@ -36,6 +36,10 @@
         <action
             android:id="@+id/action_home_to_publish"
             app:destination="@id/publishFragment" />
+
+        <action
+            android:id="@+id/action_home_to_detail"
+            app:destination="@id/publicationDetailFragment" />
     </fragment>
 
     <!-- Punto 5: carga guiada para publicar un artículo -->
@@ -64,6 +68,27 @@
         <action
             android:id="@+id/action_myPublications_to_publish"
             app:destination="@id/publishFragment" />
+
+        <action
+            android:id="@+id/action_myPublications_to_detail"
+            app:destination="@id/publicationDetailFragment" />
+    </fragment>
+
+    <!-- Punto 4: detalle de la publicación, con galería y acciones según quién mira -->
+    <fragment
+        android:id="@+id/publicationDetailFragment"
+        android:name="com.example.rondaapp.ui.detail.PublicationDetailFragment"
+        android:label="@string/detail_title"
+        tools:layout="@layout/fragment_publication_detail">
+
+        <argument
+            android:name="publicationId"
+            app:argType="integer"
+            android:defaultValue="0" />
+
+        <action
+            android:id="@+id/action_detail_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
     </fragment>
 
     <!-- Punto 2: perfil propio, con datos personales editables y reputación -->

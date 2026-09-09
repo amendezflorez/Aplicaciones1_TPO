@@ -23,6 +23,7 @@ import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.PublicationStatusBody;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
+import com.example.rondaapp.ui.detail.PublicationDetailFragment;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import javax.inject.Inject;
@@ -70,6 +71,12 @@ public class MyPublicationsFragment extends Fragment {
         connectivityWatcher = new ConnectivityWatcher(requireContext());
 
         adapter = new MyPublicationAdapter(this::cambiarEstado);
+        adapter.setOnDetailClickListener(publication -> {
+            Bundle args = new Bundle();
+            args.putInt(PublicationDetailFragment.ARG_PUBLICATION_ID, publication.getId());
+            Navigation.findNavController(requireView())
+                    .navigate(R.id.action_myPublications_to_detail, args);
+        });
         rvMyPublications.setLayoutManager(new LinearLayoutManager(getContext()));
         rvMyPublications.setAdapter(adapter);
 

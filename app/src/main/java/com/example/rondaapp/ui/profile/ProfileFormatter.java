@@ -12,10 +12,10 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Formateo compartido entre el perfil propio y el perfil público:
- * reputación y antigüedad en la plataforma.
+ * Formateo compartido entre el perfil propio, el perfil público y el detalle
+ * de la publicación: reputación, antigüedad en la plataforma y fechas.
  */
-final class ProfileFormatter {
+public final class ProfileFormatter {
 
     /** Formato en el que SQLite devuelve created_at. */
     private static final String FORMATO_BACKEND = "yyyy-MM-dd HH:mm:ss";
@@ -23,7 +23,7 @@ final class ProfileFormatter {
     private ProfileFormatter() {}
 
     /** "4.5 ★", o el texto de "sin calificaciones" si todavía no recibió ninguna. */
-    static String promedio(Context context, Reputation reputation) {
+    public static String promedio(Context context, Reputation reputation) {
         if (reputation == null || !reputation.tieneCalificaciones()) {
             return context.getString(R.string.reputation_none);
         }
@@ -32,13 +32,13 @@ final class ProfileFormatter {
     }
 
     /** "3 ventas · 1 compras". */
-    static String operaciones(Context context, Reputation reputation) {
+    public static String operaciones(Context context, Reputation reputation) {
         int ventas = reputation != null ? reputation.getSalesCount() : 0;
         int compras = reputation != null ? reputation.getPurchasesCount() : 0;
         return context.getString(R.string.reputation_operations, ventas, compras);
     }
 
-    static String cantidadCalificaciones(Context context, Reputation reputation) {
+    public static String cantidadCalificaciones(Context context, Reputation reputation) {
         int total = reputation != null ? reputation.getTotalRatings() : 0;
         return context.getString(R.string.reputation_ratings_count, total);
     }
@@ -48,7 +48,7 @@ final class ProfileFormatter {
      * puede parsear se devuelve null y la vista simplemente no muestra el dato,
      * en vez de romper por un formato inesperado del backend.
      */
-    static String antiguedad(Context context, String createdAt) {
+    public static String antiguedad(Context context, String createdAt) {
         Date alta = parsear(createdAt);
         if (alta == null) return null;
 
@@ -72,12 +72,19 @@ final class ProfileFormatter {
     }
 
     /** "Miembro desde 08/09/2026". */
-    static String miembroDesde(Context context, String createdAt) {
+    public static String miembroDesde(Context context, String createdAt) {
         Date alta = parsear(createdAt);
         if (alta == null) return null;
 
         String fecha = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(alta);
         return context.getString(R.string.public_profile_member_since, fecha);
+    }
+
+    /** "08/09/2026" para fechas cortas, como la de una pregunta. Null si no se puede parsear. */
+    public static String fechaCorta(String createdAt) {
+        Date fecha = parsear(createdAt);
+        if (fecha == null) return null;
+        return new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(fecha);
     }
 
     private static Date parsear(String createdAt) {

@@ -19,8 +19,14 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
         void onSellerClick(Publication publication);
     }
 
+    /** Aviso de que se tocó la publicación entera, para abrir su detalle (punto 4). */
+    public interface OnPublicationClickListener {
+        void onPublicationClick(Publication publication);
+    }
+
     private List<Publication> publications = new ArrayList<>();
     private OnSellerClickListener sellerClickListener;
+    private OnPublicationClickListener publicationClickListener;
 
     /**
      * Si no se setea, el nombre del vendedor se muestra pero no es clickeable.
@@ -28,6 +34,11 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
      */
     public void setOnSellerClickListener(OnSellerClickListener listener) {
         this.sellerClickListener = listener;
+    }
+
+    /** Si no se setea, la tarjeta se muestra pero no abre el detalle. */
+    public void setOnPublicationClickListener(OnPublicationClickListener listener) {
+        this.publicationClickListener = listener;
     }
 
     /** Reemplaza la lista completa. Se usa al cargar la primera pagina. */
@@ -59,6 +70,10 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     @Override
     public void onBindViewHolder(@NonNull PublicationViewHolder holder, int position) {
         Publication pub = publications.get(position);
+
+        holder.itemView.setOnClickListener(publicationClickListener == null ? null
+                : v -> publicationClickListener.onPublicationClick(pub));
+
         holder.tvTitle.setText(pub.getTitle() != null ? pub.getTitle() : "");
         holder.tvPrice.setText(String.format(Locale.getDefault(), "$ %.2f", pub.getPrice()));
 
