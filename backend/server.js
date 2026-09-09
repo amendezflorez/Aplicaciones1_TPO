@@ -19,6 +19,42 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+/** Emite el token de sesion y lo persiste, que es lo que permite validarlo despues. */
+async function crearSesion(userId) {
+  const token = randomUUID();
+  await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, userId]);
+  return token;
+}
+
+/**
+ * Exige el header "Authorization: Bearer <token>" que manda la app y lo busca
+ * en la tabla de sesiones. Deja pasar solo si existe, y cuelga el dueno en
+ * req.userId para que la ruta sepa quien esta llamando.
+ *
+ * No se aplica a /api/health ni a /api/auth/*: son justamente las rutas que se
+ * usan cuando todavia no hay sesion.
+ */
+async function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Falta el token de sesion' });
+  }
+
+  try {
+    const sesion = await db.get('SELECT user_id FROM sessions WHERE token = ?', [token]);
+    if (!sesion) {
+      return res.status(401).json({ success: false, message: 'Sesion invalida o expirada' });
+    }
+    req.userId = sesion.user_id;
+    next();
+  } catch (error) {
+    console.error('Error validando la sesion:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
 // Transporter de Gmail: la conexión que despacha los mails.
 // Las credenciales vienen del .env, nunca escritas en el código.
 const mailTransporter = nodemailer.createTransport({
@@ -83,7 +119,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
     }
 
-    const token = randomUUID();
+    const token = await crearSesion(user.id);
     res.json({
       token,
       userId: user.id,
@@ -176,7 +212,7 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 
     await db.run('DELETE FROM otp_codes WHERE email = ?', [email]);
 
-    const token = randomUUID();
+    const token = await crearSesion(user.id);
     res.json({
       token,
       userId: user.id,
@@ -196,7 +232,7 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 // 2. ENDPOINTS DE PUBLICACIONES (HOME)
 // ==========================================
 
-app.get('/api/publications', async (req, res) => {
+app.get('/api/publications', requireAuth, async (req, res) => {
   const {
     search,
     category,
@@ -299,7 +335,7 @@ const CONDICIONES_VALIDAS = ['nuevo', 'como nuevo', 'usado'];
 const MAX_FOTOS = 5;
 
 // Crear una publicacion, con sus fotos.
-app.post('/api/publications', async (req, res) => {
+app.post('/api/publications', requireAuth, async (req, res) => {
   const { userId, title, description, price, condition, category, zone, photos } = req.body;
 
   if (!userId) {
@@ -349,7 +385,7 @@ app.post('/api/publications', async (req, res) => {
 
 // "Mis publicaciones": todas las del usuario, en cualquier estado.
 // Se diferencia del perfil publico, que solo lista las activas.
-app.get('/api/users/:id/publications', async (req, res) => {
+app.get('/api/users/:id/publications', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       `SELECT p.*, (SELECT COUNT(*) FROM publication_photos ph
@@ -367,7 +403,7 @@ app.get('/api/users/:id/publications', async (req, res) => {
 });
 
 // Pausar / reactivar / marcar vendida.
-app.patch('/api/publications/:id/status', async (req, res) => {
+app.patch('/api/publications/:id/status', requireAuth, async (req, res) => {
   const { status } = req.body;
 
   if (!ESTADOS_VALIDOS.includes(status)) {
@@ -393,7 +429,7 @@ app.patch('/api/publications/:id/status', async (req, res) => {
 
 // Fotos de una publicacion. Endpoint aparte a proposito: los listados no
 // arrastran base64. El detalle del punto 4 consume este mismo endpoint.
-app.get('/api/publications/:id/photos', async (req, res) => {
+app.get('/api/publications/:id/photos', requireAuth, async (req, res) => {
   try {
     const rows = await db.all(
       'SELECT id, data, position FROM publication_photos WHERE publication_id = ? ORDER BY position',
@@ -435,7 +471,7 @@ async function getReputation(userId) {
 }
 
 // Perfil de un usuario: datos personales + reputacion + publicaciones activas.
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -473,7 +509,7 @@ app.get('/api/users/:id', async (req, res) => {
 });
 
 // Editar los datos personales del perfil.
-app.put('/api/users/:id', async (req, res) => {
+app.put('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { name, email, phone, zone } = req.body;
 
@@ -526,7 +562,7 @@ app.put('/api/users/:id', async (req, res) => {
 
 // Calificar a un usuario. La reputacion sale de aca; emitir la calificacion al
 // cerrar una operacion es parte del flujo de los puntos 4 y 5.
-app.post('/api/users/:id/ratings', async (req, res) => {
+app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { stars, role, comment, raterUserId } = req.body;
 
