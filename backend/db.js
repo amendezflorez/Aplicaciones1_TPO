@@ -130,6 +130,23 @@ const CREATE_TABLES = [
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (publication_id) REFERENCES publications (id) ON DELETE CASCADE
     )`
+  `CREATE TABLE IF NOT EXISTS favorites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      publicationId INTEGER NOT NULL,
+      savedPrice REAL NOT NULL,
+      savedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(userId, publicationId),
+      FOREIGN KEY (publicationId) REFERENCES publications(id)
+    )`,
+
+  `CREATE TABLE IF NOT EXISTS saved_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      searchTerm TEXT NOT NULL,
+      filters TEXT,
+      savedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`
 ];
 
 /**
