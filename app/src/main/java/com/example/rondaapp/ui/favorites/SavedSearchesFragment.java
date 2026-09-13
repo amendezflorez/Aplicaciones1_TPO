@@ -16,12 +16,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.SavedSearch;
 import com.example.rondaapp.data.model.SavedSearchResponse;
-import com.example.rondaapp.data.network.RetrofitClient;
+import com.example.rondaapp.data.model.SimpleResponse;
+import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -30,12 +34,18 @@ import retrofit2.Response;
  * Fragment para mostrar las búsquedas guardadas del usuario.
  * Permite ejecutar una búsqueda guardada o eliminarla.
  */
+@AndroidEntryPoint
 public class SavedSearchesFragment extends Fragment {
+
+    @Inject
+    ApiService apiService;
+
+    @Inject
+    SessionManager sessionManager;
 
     private RecyclerView rvSavedSearches;
     private SavedSearchAdapter adapter;
     private TextView tvEmptyState;
-    private SessionManager sessionManager;
     private List<SavedSearch> savedSearches = new ArrayList<>();
 
     @Nullable
@@ -48,15 +58,13 @@ public class SavedSearchesFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        sessionManager = new SessionManager(requireContext());
-
         rvSavedSearches = view.findViewById(R.id.rvSavedSearches);
         tvEmptyState = view.findViewById(R.id.tvEmptyState);
 
         adapter = new SavedSearchAdapter();
         adapter.setOnDeleteListener(this::deleteSavedSearch);
         adapter.setOnExecuteListener(this::executeSavedSearch);
-        rvSavedSearches.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvSavedSearches.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvSavedSearches.setAdapter(adapter);
 
         loadSavedSearches();
@@ -65,66 +73,69 @@ public class SavedSearchesFragment extends Fragment {
     private void loadSavedSearches() {
         String userId = sessionManager.getUserId();
         if (userId == null) {
-            tvEmptyState.setText(R.string.error_session_expired);
-            tvEmptyState.setVisibility(View.VISIBLE);
+            showEmpty(getString(R.string.error_session_expired));
             return;
         }
 
-        RetrofitClient.getApiService().getSavedSearches(userId).enqueue(new Callback<SavedSearchResponse>() {
+        apiService.getSavedSearches(userId).enqueue(new Callback<SavedSearchResponse>() {
             @Override
-            public void onResponse(Call<SavedSearchResponse> call, Response<SavedSearchResponse> response) {
-                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+            public void onResponse(@NonNull Call<SavedSearchResponse> call, @NonNull Response<SavedSearchResponse> response) {
+                if (!isAdded()) return;
+
+                // Igual que en Favoritos: el backend no manda "success", solo "data".
+                if (response.isSuccessful() && response.body() != null && response.body().getData() != null) {
                     savedSearches = response.body().getData();
-                    if (savedSearches != null && !savedSearches.isEmpty()) {
+                    if (!savedSearches.isEmpty()) {
                         adapter.setSavedSearches(savedSearches);
                         tvEmptyState.setVisibility(View.GONE);
                     } else {
-                        tvEmptyState.setText(R.string.no_saved_searches);
-                        tvEmptyState.setVisibility(View.VISIBLE);
+                        showEmpty(getString(R.string.no_saved_searches));
                     }
                 } else {
-                    tvEmptyState.setText(R.string.error_loading_searches);
-                    tvEmptyState.setVisibility(View.VISIBLE);
+                    showEmpty(getString(R.string.error_loading_searches));
                 }
             }
 
             @Override
-            public void onFailure(Call<SavedSearchResponse> call, Throwable t) {
-                Toast.makeText(getContext(), "Error de red: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                tvEmptyState.setText(R.string.error_loading_searches);
-                tvEmptyState.setVisibility(View.VISIBLE);
+            public void onFailure(@NonNull Call<SavedSearchResponse> call, @NonNull Throwable t) {
+                if (!isAdded()) return;
+                showEmpty(getString(R.string.error_loading_searches));
             }
         });
     }
 
     private void deleteSavedSearch(int searchId) {
-        RetrofitClient.getApiService().deleteSavedSearch(searchId).enqueue(new Callback<com.example.rondaapp.data.model.SimpleResponse>() {
+        apiService.deleteSavedSearch(searchId).enqueue(new Callback<SimpleResponse>() {
             @Override
-            public void onResponse(Call<com.example.rondaapp.data.model.SimpleResponse> call, Response<com.example.rondaapp.data.model.SimpleResponse> response) {
+            public void onResponse(@NonNull Call<SimpleResponse> call, @NonNull Response<SimpleResponse> response) {
+                if (!isAdded()) return;
                 if (response.isSuccessful()) {
                     savedSearches.removeIf(s -> s.getId() == searchId);
                     adapter.setSavedSearches(savedSearches);
-                    Toast.makeText(getContext(), R.string.search_deleted, Toast.LENGTH_SHORT).show();
-
+                    Toast.makeText(requireContext(), R.string.search_deleted, Toast.LENGTH_SHORT).show();
                     if (savedSearches.isEmpty()) {
-                        tvEmptyState.setText(R.string.no_saved_searches);
-                        tvEmptyState.setVisibility(View.VISIBLE);
+                        showEmpty(getString(R.string.no_saved_searches));
                     }
                 } else {
-                    Toast.makeText(getContext(), R.string.error_deleting_search, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), R.string.error_deleting_search, Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
-            public void onFailure(Call<com.example.rondaapp.data.model.SimpleResponse> call, Throwable t) {
-                Toast.makeText(getContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            public void onFailure(@NonNull Call<SimpleResponse> call, @NonNull Throwable t) {
+                if (!isAdded()) return;
+                Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void executeSavedSearch(SavedSearch search) {
-        // Aquí iría la lógica para ejecutar la búsqueda guardada
-        // Por ahora, mostrar un toast
-        Toast.makeText(getContext(), "Ejecutando búsqueda: " + search.getSearchTerm(), Toast.LENGTH_SHORT).show();
+        // TODO: próximo paso del Punto 11 — aplicar estos filtros de verdad en el Home.
+        Toast.makeText(requireContext(), "Ejecutando búsqueda: " + search.getSearchTerm(), Toast.LENGTH_SHORT).show();
+    }
+
+    private void showEmpty(String message) {
+        tvEmptyState.setText(message);
+        tvEmptyState.setVisibility(View.VISIBLE);
     }
 }
