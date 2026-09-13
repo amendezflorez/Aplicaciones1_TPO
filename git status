@@ -1,0 +1,25 @@
+[33m6679052[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m Merge pull request #14 from amendezflorez/feature_4_detalle
+[33me5d2b7b[m[33m ([m[1;31morigin/feature_4_detalle[m[33m)[m Punto 4: detalle de la publicacion
+[33m854d90c[m Merge pull request #13 from amendezflorez/feature_auth_backend
+[33m4041b74[m[33m ([m[1;31morigin/feature_auth_backend[m[33m)[m Valida el token en el backend: tabla sessions y middleware requireAuth
+[33mb13c1b9[m Merge pull request #12 from amendezflorez/feature_auth_interceptor
+[33md70be29[m[33m ([m[1;31morigin/feature_auth_interceptor[m[33m)[m Interceptor de Authorization y timeouts en OkHttp
+[33me1c40b9[m Merge pull request #11 from amendezflorez/fix_gitignore_encoding
+[33mb37b819[m[33m ([m[1;31morigin/fix_gitignore_encoding[m[33m)[m Arregla el encoding del .gitignore y deduplica .env
+[33m626b2aa[m Merge pull request #10 from amendezflorez/feature_room
+[33m4c74050[m Merge pull request #9 from amendezflorez/feature_otp_email
+[33m88137f8[m[33m ([m[1;31morigin/feature_room[m[33m)[m Migro el cache offline de JSON a Room
+[33m0888e8e[m[33m ([m[1;31morigin/feature_otp_email[m[33m)[m Conditional logging for OTP code in development
+[33m12d4e31[m OTP por mail con Nodemailer + README de configuracion del .env
+[33m4d82cef[m Merge pull request #8 from amendezflorez/feature_hilt
+[33m2665ab1[m[33m ([m[1;31morigin/feature_hilt[m[33m)[m Migracion a Hilt: inyeccion de dependencias
+[33m6898389[m Merge pull request #7 from amendezflorez/feature_offline
+[33m3f0501d[m[33m ([m[1;31morigin/feature_offline[m[33m)[m Punto 6: modo sin conexion
+[33m73e73c9[m Merge pull request #6 from amendezflorez/feature_5
+[33m93f721c[m[33m ([m[1;31morigin/feature_5[m[33m)[m Punto 5: publicar un articulo y mis publicaciones
+[33mf9f0379[m Merge pull request #5 from amendezflorez/feature_3_cercania
+[33m0b7f68e[m[33m ([m[1;31morigin/feature_3_cercania[m[33m)[m Punto 3: filtro de cercania a la zona del usuario
+[33m746ca64[m Merge pull request #4 from amendezflorez/feature_2
+[33ma35a2a0[m Merge pull request #3 from amendezflorez/feature_3
+[33m2463197[m[33m ([m[1;31morigin/feature_2[m[33m)[m Punto 2: perfil y reputacion
+[33mf29f898[m[33m ([m[1;31morigin/feature_3[m[33m)[m Punto 3: paginacion con scroll infinito en el Home

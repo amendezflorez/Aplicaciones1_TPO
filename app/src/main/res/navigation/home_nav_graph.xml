@@ -111,4 +111,17 @@
             android:defaultValue="" />
     </fragment>
 
+    <!-- Punto 11: Favoritos y Búsquedas Guardadas -->
+    <fragment
+        android:id="@+id/favoritesFragment"
+        android:name="com.example.rondaapp.ui.favorites.FavoritesFragment"
+        android:label="Mis favoritos"
+        tools:layout="@layout/fragment_favorites" />
+
+    <fragment
+        android:id="@+id/savedSearchesFragment"
+        android:name="com.example.rondaapp.ui.favorites.SavedSearchesFragment"
+        android:label="Búsquedas guardadas"
+        tools:layout="@layout/fragment_saved_searches" />
+
 </navigation>

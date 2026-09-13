@@ -3,6 +3,7 @@ package com.example.rondaapp.ui.home;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,30 +25,33 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
         void onPublicationClick(Publication publication);
     }
 
+    /** Listener para acciones con favoritos (Punto 11). */
+    public interface OnPublicationActionListener {
+        void onFavoriteClicked(Publication publication, boolean isFavorite);
+    }
+
     private List<Publication> publications = new ArrayList<>();
     private OnSellerClickListener sellerClickListener;
     private OnPublicationClickListener publicationClickListener;
+    private OnPublicationActionListener actionListener;
 
-    /**
-     * Si no se setea, el nombre del vendedor se muestra pero no es clickeable.
-     * El perfil público usa el adapter así, para no navegar al mismo perfil.
-     */
     public void setOnSellerClickListener(OnSellerClickListener listener) {
         this.sellerClickListener = listener;
     }
 
-    /** Si no se setea, la tarjeta se muestra pero no abre el detalle. */
     public void setOnPublicationClickListener(OnPublicationClickListener listener) {
         this.publicationClickListener = listener;
     }
 
-    /** Reemplaza la lista completa. Se usa al cargar la primera pagina. */
+    public void setActionListener(OnPublicationActionListener listener) {
+        this.actionListener = listener;
+    }
+
     public void setPublications(List<Publication> publications) {
         this.publications = (publications != null) ? new ArrayList<>(publications) : new ArrayList<>();
         notifyDataSetChanged();
     }
 
-    /** Anexa una pagina al final de la lista. Se usa en el scroll infinito. */
     public void addPublications(List<Publication> nuevas) {
         if (nuevas == null || nuevas.isEmpty()) return;
         int desde = publications.size();
@@ -92,12 +96,15 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
         }
 
         bindVendedor(holder, pub);
+
+        // Botón de favorito (Punto 11)
+        holder.btnFavorite.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onFavoriteClicked(pub, true);
+            }
+        });
     }
 
-    /**
-     * Muestra el vendedor y, si hay listener y la publicación tiene dueño,
-     * lo deja clickeable para abrir su perfil público.
-     */
     private void bindVendedor(PublicationViewHolder holder, Publication pub) {
         boolean hayVendedor = pub.getSellerName() != null && !pub.getSellerName().isEmpty();
         if (!hayVendedor) {
@@ -124,6 +131,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
 
     static class PublicationViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvPrice, tvCondition, tvZone, tvSeller;
+        ImageButton btnFavorite;
 
         public PublicationViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -132,6 +140,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
             tvCondition = itemView.findViewById(R.id.tvCondition);
             tvZone = itemView.findViewById(R.id.tvZone);
             tvSeller = itemView.findViewById(R.id.tvSeller);
+            btnFavorite = itemView.findViewById(R.id.btnFavorite);
         }
     }
 }

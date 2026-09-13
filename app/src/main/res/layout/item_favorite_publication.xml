@@ -64,41 +64,17 @@
             </LinearLayout>
         </LinearLayout>
 
-
         <ImageButton
-            android:id="@+id/btnFavorite"
+            android:id="@+id/btnRemove"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginStart="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/favorite_button"
+            android:contentDescription="@string/remove_favorite"
             android:scaleType="fitCenter"
-            android:src="@android:drawable/ic_menu_favorite"
-            android:tint="#E0E0E0"
+            android:src="@android:drawable/ic_menu_delete"
+            android:tint="#D32F2F"
             android:stateListAnimator="@null" />
-
-
-        <!-- Punto 2: acceso al perfil público del vendedor antes de operar -->
-        <TextView
-            android:id="@+id/tvSeller"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="?attr/selectableItemBackground"
-            android:paddingVertical="4dp"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#5E35B1" />
-        <ImageButton
-            android:id="@+id/btnFavorite"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:contentDescription="@string/favorite_button"
-            android:src="@android:drawable/ic_menu_add"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/holo_red_light" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

@@ -165,6 +165,11 @@ public class HomeFragment extends Fragment {
             args.putInt(PublicationDetailFragment.ARG_PUBLICATION_ID, publication.getId());
             Navigation.findNavController(view).navigate(R.id.action_home_to_detail, args);
         });
+        adapter.setActionListener((publication, isFavorite) -> {
+            // TODO: implementar lógica de favorito
+            Toast.makeText(requireContext(), "Favorito clickeado", Toast.LENGTH_SHORT).show();
+        });
+
         layoutManager = new LinearLayoutManager(getContext());
         rvPublications.setLayoutManager(layoutManager);
         rvPublications.setAdapter(adapter);
