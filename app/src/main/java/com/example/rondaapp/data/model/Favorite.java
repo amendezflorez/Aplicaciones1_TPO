@@ -18,6 +18,9 @@ public class Favorite {
     @SerializedName("savedAt")
     private String savedAt;
 
+    @SerializedName("savedPrice")
+    private double savedPrice;
+
     public Favorite() {
     }
 
@@ -64,5 +67,13 @@ public class Favorite {
 
     public void setSavedAt(String savedAt) {
         this.savedAt = savedAt;
+    }
+
+    public double getSavedPrice() {
+        return savedPrice;
+    }
+
+    public void setSavedPrice(double savedPrice) {
+        this.savedPrice = savedPrice;
     }
 }

@@ -29,6 +29,7 @@ import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.local.OfflineCache;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
+import com.example.rondaapp.data.model.Favorite;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
 import com.example.rondaapp.ui.detail.PublicationDetailFragment;
@@ -165,6 +166,36 @@ public class HomeFragment extends Fragment {
             args.putInt(PublicationDetailFragment.ARG_PUBLICATION_ID, publication.getId());
             Navigation.findNavController(view).navigate(R.id.action_home_to_detail, args);
         });
+
+        adapter.setActionListener((publication, isFavorite) -> {
+            String userId = sessionManager.getUserId();
+            if (userId == null) {
+                Toast.makeText(requireContext(), "Sesión expirada", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Favorite favorite = new Favorite();
+            favorite.setUserId(userId);
+            favorite.setPublicationId(publication.getId());
+            favorite.setSavedPrice(publication.getPrice());
+
+            apiService.addFavorite(favorite).enqueue(new Callback<Favorite>() {
+                @Override
+                public void onResponse(@NonNull Call<Favorite> call, @NonNull Response<Favorite> response) {
+                    if (response.isSuccessful()) {
+                        Toast.makeText(requireContext(), "¡Agregado a favoritos!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(requireContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<Favorite> call, @NonNull Throwable t) {
+                    Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
         layoutManager = new LinearLayoutManager(getContext());
         rvPublications.setLayoutManager(layoutManager);
         rvPublications.setAdapter(adapter);
