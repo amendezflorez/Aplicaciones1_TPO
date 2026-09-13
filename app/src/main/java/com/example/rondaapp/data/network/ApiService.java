@@ -19,6 +19,10 @@ import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.SimpleResponse;
 import com.example.rondaapp.data.model.UpdateProfileBody;
 import com.example.rondaapp.data.model.UserProfile;
+import com.example.rondaapp.data.model.Favorite;
+import com.example.rondaapp.data.model.FavoriteResponse;
+import com.example.rondaapp.data.model.SavedSearch;
+import com.example.rondaapp.data.model.SavedSearchResponse;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -28,6 +32,7 @@ import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
+import retrofit2.http.DELETE;
 
 /**
  * Interface unificada para los servicios de la API REST de Ronda.
@@ -116,4 +121,24 @@ public interface ApiService {
             @Query("page") int page,
             @Query("limit") int limit
     );
+
+    // --- Endpoints de Favoritos y Búsquedas Guardadas (Punto 11) ---
+
+    @POST("favorites")
+    Call<Favorite> addFavorite(@Body Favorite favorite);
+
+    @GET("favorites")
+    Call<FavoriteResponse> getFavorites(@Query("userId") String userId);
+
+    @DELETE("favorites/{id}")
+    Call<SimpleResponse> deleteFavorite(@Path("id") int favoriteId);
+
+    @POST("saved-searches")
+    Call<SavedSearch> addSavedSearch(@Body SavedSearch savedSearch);
+
+    @GET("saved-searches")
+    Call<SavedSearchResponse> getSavedSearches(@Query("userId") String userId);
+
+    @DELETE("saved-searches/{id}")
+    Call<SimpleResponse> deleteSavedSearch(@Path("id") int searchId);
 }
