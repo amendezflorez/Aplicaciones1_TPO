@@ -73,8 +73,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/favorite_button"
             android:scaleType="fitCenter"
-            android:src="@android:drawable/ic_menu_favorite"
-            android:tint="#E0E0E0"
+            android:src="@android:drawable/btn_star_big_off"
+            android:tint="@android:color/holo_red_light"
             android:stateListAnimator="@null" />
 
 
@@ -89,16 +89,6 @@
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="#5E35B1" />
-        <ImageButton
-            android:id="@+id/btnFavorite"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="8dp"
-            android:contentDescription="@string/favorite_button"
-            android:src="@android:drawable/ic_menu_add"
-            android:scaleType="centerInside"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/holo_red_light" />
 
     </LinearLayout>
 </androidx.cardview.widget.CardView>

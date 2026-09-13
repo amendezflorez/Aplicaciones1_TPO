@@ -40,9 +40,7 @@ public class FavoritesFragment extends Fragment {
     @Inject
     ApiService apiService;
 
-    @Inject
-    SessionManager sessionManager;
-
+    private SessionManager sessionManager;
     private RecyclerView rvFavorites;
     private FavoritePublicationAdapter adapter;
     private TextView tvEmptyState;
@@ -58,6 +56,7 @@ public class FavoritesFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        sessionManager = new SessionManager(requireContext());
         rvFavorites = view.findViewById(R.id.rvFavorites);
         tvEmptyState = view.findViewById(R.id.tvEmptyState);
 

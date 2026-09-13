@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -39,9 +40,7 @@ public class SavedSearchesFragment extends Fragment {
 
     @Inject
     ApiService apiService;
-
-    @Inject
-    SessionManager sessionManager;
+    private SessionManager sessionManager;
 
     private RecyclerView rvSavedSearches;
     private SavedSearchAdapter adapter;
@@ -58,6 +57,7 @@ public class SavedSearchesFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        sessionManager = new SessionManager(requireContext());
         rvSavedSearches = view.findViewById(R.id.rvSavedSearches);
         tvEmptyState = view.findViewById(R.id.tvEmptyState);
 
@@ -130,8 +130,19 @@ public class SavedSearchesFragment extends Fragment {
     }
 
     private void executeSavedSearch(SavedSearch search) {
-        // TODO: próximo paso del Punto 11 — aplicar estos filtros de verdad en el Home.
-        Toast.makeText(requireContext(), "Ejecutando búsqueda: " + search.getSearchTerm(), Toast.LENGTH_SHORT).show();
+        // Punto 11: le paso los filtros al Home por FragmentResult y vuelvo,
+        // para que los aplique de verdad sobre el listado.
+        Bundle result = new Bundle();
+        result.putString("searchTerm", search.getSearchTerm());
+        result.putString("category", search.getCategory());
+        result.putString("condition", search.getCondition());
+        result.putString("zone", search.getZone());
+        if (search.getMinPrice() != null) result.putDouble("minPrice", search.getMinPrice());
+        if (search.getMaxPrice() != null) result.putDouble("maxPrice", search.getMaxPrice());
+        result.putString("sort", search.getSort() != null ? search.getSort() : "recent");
+
+        getParentFragmentManager().setFragmentResult("execute_saved_search", result);
+        Navigation.findNavController(requireView()).popBackStack(R.id.homeFragment, false);
     }
 
     private void showEmpty(String message) {
