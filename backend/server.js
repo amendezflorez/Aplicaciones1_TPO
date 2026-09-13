@@ -750,8 +750,71 @@ app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
   }
 });
 
+// --- Endpoints de Favoritos (Punto 11) ---
+app.post('/api/favorites', requireAuth, (req, res) => {
+  const { publicationId, savedPrice } = req.body;
+  const userId = req.userId;
+  db.run(
+    'INSERT INTO favorites (userId, publicationId, savedPrice) VALUES (?, ?, ?)',
+    [userId, publicationId, savedPrice],
+    function(err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ id: this.lastID, userId, publicationId, savedPrice, savedAt: new Date() });
+    }
+  );
+});
+
+app.get('/api/favorites', requireAuth, (req, res) => {
+  const userId = req.query.userId;
+  db.all(
+    `SELECT f.*, p.title, p.price FROM favorites f 
+     JOIN publications p ON f.publicationId = p.id WHERE f.userId = ?`,
+    [userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ data: rows });
+    }
+  );
+});
+
+app.delete('/api/favorites/:id', requireAuth, (req, res) => {
+  db.run('DELETE FROM favorites WHERE id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Favorito eliminado' });
+  });
+});
+
+app.post('/api/saved-searches', requireAuth, (req, res) => {
+  const { searchTerm, filters } = req.body;
+  const userId = req.userId;
+  db.run(
+    'INSERT INTO saved_searches (userId, searchTerm, filters) VALUES (?, ?, ?)',
+    [userId, searchTerm, JSON.stringify(filters)],
+    function(err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ id: this.lastID, userId, searchTerm, filters, savedAt: new Date() });
+    }
+  );
+});
+
+app.get('/api/saved-searches', requireAuth, (req, res) => {
+  const userId = req.query.userId;
+  db.all('SELECT * FROM saved_searches WHERE userId = ?', [userId], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ data: rows.map(r => ({ ...r, filters: JSON.parse(r.filters || '{}') })) });
+  });
+});
+
+app.delete('/api/saved-searches/:id', requireAuth, (req, res) => {
+  db.run('DELETE FROM saved_searches WHERE id = ?', [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ message: 'Búsqueda eliminada' });
+  });
+});
+
 // Se espera a que el esquema termine de migrar antes de atender pedidos.
 db.ready
+
   .then(() => {
     app.listen(PORT, () => {
       console.log(`===================================================`);
