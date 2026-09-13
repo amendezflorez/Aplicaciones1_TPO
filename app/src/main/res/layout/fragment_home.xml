@@ -36,6 +36,53 @@
             android:textSize="12sp" />
     </LinearLayout>
 
+    <!-- Accesos a perfil (punto 2) y a publicar / mis publicaciones (punto 5) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnMyProfile"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_my_profile"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnPublish"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_publish"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnMyPublications"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_my_publications"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Punto 6: aviso de que se está mostrando información cacheada -->
+    <TextView
+        android:id="@+id/tvOfflineBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFF3CD"
+        android:textColor="#7A5B00"
+        android:padding="10dp"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:text="Sin conexión · mostrando lo último cargado" />
+
     <!-- Buscador + Botón de Filtros -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -83,5 +130,17 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPublications"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Indicador de carga de la pagina siguiente (scroll infinito) -->
+    <ProgressBar
+        android:id="@+id/progressPaging"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginVertical="8dp"
+        android:visibility="gone"
+        tools:visibility="visible" />
 </LinearLayout>

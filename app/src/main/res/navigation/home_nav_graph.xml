@@ -20,6 +20,95 @@
             android:name="username"
             app:argType="string"
             android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_home_to_myProfile"
+            app:destination="@id/myProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
+
+        <action
+            android:id="@+id/action_home_to_myPublications"
+            app:destination="@id/myPublicationsFragment" />
+
+        <action
+            android:id="@+id/action_home_to_publish"
+            app:destination="@id/publishFragment" />
+
+        <action
+            android:id="@+id/action_home_to_detail"
+            app:destination="@id/publicationDetailFragment" />
+    </fragment>
+
+    <!-- Punto 5: carga guiada para publicar un artículo -->
+    <fragment
+        android:id="@+id/publishFragment"
+        android:name="com.example.rondaapp.ui.publish.PublishFragment"
+        android:label="Publicar un artículo"
+        tools:layout="@layout/fragment_publish">
+
+        <!-- Al publicar se vuelve a la lista, sacando el formulario del back stack
+             para que "atrás" no reabra un borrador que ya se envió. -->
+        <action
+            android:id="@+id/action_publish_to_myPublications"
+            app:destination="@id/myPublicationsFragment"
+            app:popUpTo="@id/publishFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <!-- Punto 5: mis publicaciones con su estado y pausar/reactivar -->
+    <fragment
+        android:id="@+id/myPublicationsFragment"
+        android:name="com.example.rondaapp.ui.publish.MyPublicationsFragment"
+        android:label="Mis publicaciones"
+        tools:layout="@layout/fragment_my_publications">
+
+        <action
+            android:id="@+id/action_myPublications_to_publish"
+            app:destination="@id/publishFragment" />
+
+        <action
+            android:id="@+id/action_myPublications_to_detail"
+            app:destination="@id/publicationDetailFragment" />
+    </fragment>
+
+    <!-- Punto 4: detalle de la publicación, con galería y acciones según quién mira -->
+    <fragment
+        android:id="@+id/publicationDetailFragment"
+        android:name="com.example.rondaapp.ui.detail.PublicationDetailFragment"
+        android:label="@string/detail_title"
+        tools:layout="@layout/fragment_publication_detail">
+
+        <argument
+            android:name="publicationId"
+            app:argType="integer"
+            android:defaultValue="0" />
+
+        <action
+            android:id="@+id/action_detail_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
+    </fragment>
+
+    <!-- Punto 2: perfil propio, con datos personales editables y reputación -->
+    <fragment
+        android:id="@+id/myProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.MyProfileFragment"
+        android:label="Mi perfil"
+        tools:layout="@layout/fragment_my_profile" />
+
+    <!-- Punto 2: perfil público de la otra parte, consultable antes de operar -->
+    <fragment
+        android:id="@+id/publicProfileFragment"
+        android:name="com.example.rondaapp.ui.profile.PublicProfileFragment"
+        android:label="Perfil del vendedor"
+        tools:layout="@layout/fragment_public_profile">
+
+        <argument
+            android:name="userId"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
 </navigation>

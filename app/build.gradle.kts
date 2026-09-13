@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -45,7 +46,16 @@ dependencies {
     // Red y JSON
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.okhttp)
     implementation(libs.gson)
+
+    // Inyección de dependencias (Hilt)
+    implementation(libs.hilt.android)
+    annotationProcessor(libs.hilt.compiler)
+
+    // Persistencia local (Room)
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room.compiler)
 
     // UI
     implementation(libs.androidx.recyclerview)

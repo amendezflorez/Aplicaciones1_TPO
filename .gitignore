@@ -52,3 +52,6 @@ backend_home/node_modules/
 *.db
 backend/*.db
 backend-ronda/*.db
+
+# Variables de entorno (secretos)
+.env

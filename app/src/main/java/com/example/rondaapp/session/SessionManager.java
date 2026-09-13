@@ -14,6 +14,7 @@ public class SessionManager {
     private static final String KEY_USER_ID = "user_id";
     private static final String KEY_EMAIL = "email";
     private static final String KEY_NAME = "name";
+    private static final String KEY_ZONE = "zone";
 
     private final SharedPreferences prefs;
 
@@ -23,11 +24,16 @@ public class SessionManager {
     }
 
     public void saveSession(String token, String userId, String email, String name) {
+        saveSession(token, userId, email, name, null);
+    }
+
+    public void saveSession(String token, String userId, String email, String name, String zone) {
         prefs.edit()
                 .putString(KEY_TOKEN, token)
                 .putString(KEY_USER_ID, userId)
                 .putString(KEY_EMAIL, email)
                 .putString(KEY_NAME, name)
+                .putString(KEY_ZONE, zone)
                 .apply();
     }
 
@@ -39,12 +45,37 @@ public class SessionManager {
         return prefs.getString(KEY_TOKEN, null);
     }
 
+    public String getUserId() {
+        return prefs.getString(KEY_USER_ID, null);
+    }
+
+    /**
+     * Refresca el nombre y el email cacheados después de editar el perfil, para que
+     * el saludo del Home no siga mostrando los datos viejos.
+     */
+    public void updateDatosBasicos(String name, String email) {
+        prefs.edit()
+                .putString(KEY_NAME, name)
+                .putString(KEY_EMAIL, email)
+                .apply();
+    }
+
     public String getEmail() {
         return prefs.getString(KEY_EMAIL, null);
     }
 
     public String getName() {
         return prefs.getString(KEY_NAME, null);
+    }
+
+    /** Zona del usuario; es lo que ancla el filtro de cercanía del Home. */
+    public String getZone() {
+        return prefs.getString(KEY_ZONE, null);
+    }
+
+    /** Refresca la zona cacheada cuando el usuario la ve o la edita en su perfil. */
+    public void setZone(String zone) {
+        prefs.edit().putString(KEY_ZONE, zone).apply();
     }
 
     public void clear() {

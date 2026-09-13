@@ -1,17 +1,84 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { randomUUID } = require('crypto');
+const nodemailer = require('nodemailer');
 const db = require('./db');
+const { zonasCercanas } = require('./zones');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Las fotos viajan en base64 dentro del JSON, y el limite por defecto de
+// express es 100kb: con una sola foto ya se pasa.
+app.use(express.json({ limit: '12mb' }));
 
 const PORT = process.env.PORT || 8080;
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de validez
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/** Emite el token de sesion y lo persiste, que es lo que permite validarlo despues. */
+async function crearSesion(userId) {
+  const token = randomUUID();
+  await db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, userId]);
+  return token;
+}
+
+/**
+ * Exige el header "Authorization: Bearer <token>" que manda la app y lo busca
+ * en la tabla de sesiones. Deja pasar solo si existe, y cuelga el dueno en
+ * req.userId para que la ruta sepa quien esta llamando.
+ *
+ * No se aplica a /api/health ni a /api/auth/*: son justamente las rutas que se
+ * usan cuando todavia no hay sesion.
+ */
+async function requireAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Falta el token de sesion' });
+  }
+
+  try {
+    const sesion = await db.get('SELECT user_id FROM sessions WHERE token = ?', [token]);
+    if (!sesion) {
+      return res.status(401).json({ success: false, message: 'Sesion invalida o expirada' });
+    }
+    req.userId = sesion.user_id;
+    next();
+  } catch (error) {
+    console.error('Error validando la sesion:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+// Transporter de Gmail: la conexión que despacha los mails.
+// Las credenciales vienen del .env, nunca escritas en el código.
+const mailTransporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
+
+// Manda el código OTP por mail. Es async pero no bloquea la respuesta:
+// si el mail falla, el código igual quedó guardado y se ve en consola.
+async function enviarOtpPorMail(email, code) {
+  try {
+    await mailTransporter.sendMail({
+      from: process.env.MAIL_FROM,
+      to: email,
+      subject: 'Tu código de acceso a Ronda',
+      text: `Tu código de verificación es: ${code}\n\nVence en 5 minutos.`,
+    });
+    console.log(`✅ Mail con OTP enviado a ${email}`);
+  } catch (error) {
+    console.error(`❌ No se pudo enviar el mail a ${email}:`, error.message);
+  }
 }
 
 // Log simple de solicitudes entrantes
@@ -52,12 +119,15 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
     }
 
-    const token = randomUUID();
+    const token = await crearSesion(user.id);
     res.json({
       token,
       userId: user.id,
       email: user.email,
       name: user.name,
+      // La zona viaja en el login para que el filtro de cercania del Home
+      // funcione sin tener que pedir el perfil aparte.
+      zone: user.zone || null,
     });
   } catch (error) {
     console.error('Error en /api/auth/login:', error);
@@ -79,7 +149,10 @@ app.post('/api/auth/otp/request', async (req, res) => {
       ON CONFLICT(email) DO UPDATE SET code = excluded.code, expires_at = excluded.expires_at
     `, [email, code, expiresAt]);
 
-    console.log(`\n📩 Código OTP para ${email}: ${code}\n`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n📩 Código OTP para ${email}: ${code}\n`);
+    }
+    enviarOtpPorMail(email, code);
     res.json({ success: true, message: 'Código enviado' });
   } catch (error) {
     console.error('Error en /api/auth/otp/request:', error);
@@ -102,6 +175,7 @@ app.post('/api/auth/otp/resend', async (req, res) => {
     `, [email, code, expiresAt]);
 
     console.log(`\n📩 Código OTP reenviado para ${email}: ${code}\n`);
+    enviarOtpPorMail(email, code);
     res.json({ success: true, message: 'Código reenviado' });
   } catch (error) {
     console.error('Error en /api/auth/otp/resend:', error);
@@ -138,12 +212,15 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 
     await db.run('DELETE FROM otp_codes WHERE email = ?', [email]);
 
-    const token = randomUUID();
+    const token = await crearSesion(user.id);
     res.json({
       token,
       userId: user.id,
       email: user.email,
       name: user.name,
+      // La zona viaja en el login para que el filtro de cercania del Home
+      // funcione sin tener que pedir el perfil aparte.
+      zone: user.zone || null,
     });
   } catch (error) {
     console.error('Error en /api/auth/otp/verify:', error);
@@ -155,7 +232,7 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 // 2. ENDPOINTS DE PUBLICACIONES (HOME)
 // ==========================================
 
-app.get('/api/publications', async (req, res) => {
+app.get('/api/publications', requireAuth, async (req, res) => {
   const {
     search,
     category,
@@ -163,60 +240,85 @@ app.get('/api/publications', async (req, res) => {
     minPrice,
     maxPrice,
     zone,
+    nearZone,
     sortBy,
     page = 1,
     limit = 10
   } = req.query;
 
-  let query = 'SELECT * FROM publications WHERE 1=1';
-  const params = [];
+  // El WHERE se arma una sola vez y se reutiliza para el COUNT del total,
+  // asi el cliente sabe cuando dejar de pedir paginas. Las columnas van
+  // calificadas con "p." porque el JOIN con users trae otra columna "zone".
+  let whereClause = " WHERE p.status = 'activa'";
+  const filterParams = [];
 
   if (search) {
-    query += ' AND (title LIKE ? OR description LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`);
+    whereClause += ' AND (p.title LIKE ? OR p.description LIKE ?)';
+    filterParams.push(`%${search}%`, `%${search}%`);
   }
   if (category) {
-    query += ' AND category = ?';
-    params.push(category);
+    whereClause += ' AND p.category = ?';
+    filterParams.push(category);
   }
   if (condition) {
-    query += ' AND condition = ?';
-    params.push(condition);
+    whereClause += ' AND p.condition = ?';
+    filterParams.push(condition);
   }
   if (zone) {
-    query += ' AND zone = ?';
-    params.push(zone);
+    whereClause += ' AND p.zone = ?';
+    filterParams.push(zone);
+  }
+  // Punto 3: "cercanía a la zona del usuario". No es igualdad: se expande la
+  // zona propia a ella misma más sus barrios linderos. Si el usuario tiene
+  // seteada una zona que no está en la tabla, zonasCercanas() devuelve solo
+  // esa y el filtro degrada a igualdad exacta.
+  if (nearZone) {
+    const cercanas = zonasCercanas(nearZone);
+    if (cercanas.length > 0) {
+      const placeholders = cercanas.map(() => '?').join(', ');
+      whereClause += ` AND p.zone IN (${placeholders})`;
+      filterParams.push(...cercanas);
+    }
   }
   if (minPrice) {
-    query += ' AND price >= ?';
-    params.push(Number(minPrice));
+    whereClause += ' AND p.price >= ?';
+    filterParams.push(Number(minPrice));
   }
   if (maxPrice) {
-    query += ' AND price <= ?';
-    params.push(Number(maxPrice));
+    whereClause += ' AND p.price <= ?';
+    filterParams.push(Number(maxPrice));
   }
 
   const sortMap = {
-    'price_asc': 'price ASC',
-    'price_desc': 'price DESC',
-    'recent': 'created_at DESC'
+    'price_asc': 'p.price ASC',
+    'price_desc': 'p.price DESC',
+    'recent': 'p.created_at DESC'
   };
-  const orderByClause = sortMap[sortBy] || 'created_at DESC';
-  query += ` ORDER BY ${orderByClause}`;
+  const orderByClause = sortMap[sortBy] || 'p.created_at DESC';
 
   const limitNum = Math.max(1, parseInt(limit, 10) || 10);
   const pageNum = Math.max(1, parseInt(page, 10) || 1);
   const offset = (pageNum - 1) * limitNum;
 
-  query += ' LIMIT ? OFFSET ?';
-  params.push(limitNum, offset);
+  // seller_name viaja en el listado para poder abrir el perfil publico del
+  // vendedor desde la tarjeta (punto 2: consultar a la otra parte antes de operar).
+  const listQuery = `SELECT p.*, u.name AS seller_name,
+                            (SELECT COUNT(*) FROM publication_photos ph
+                              WHERE ph.publication_id = p.id) AS photo_count
+                     FROM publications p
+                     LEFT JOIN users u ON u.id = p.user_id${whereClause}
+                     ORDER BY ${orderByClause} LIMIT ? OFFSET ?`;
+  const countQuery = `SELECT COUNT(*) AS total FROM publications p${whereClause}`;
 
   try {
-    const rows = await db.all(query, params);
+    const rows = await db.all(listQuery, [...filterParams, limitNum, offset]);
+    const countRow = await db.get(countQuery, filterParams);
+
     res.json({
       data: rows,
       page: pageNum,
-      limit: limitNum
+      limit: limitNum,
+      total: countRow ? countRow.total : rows.length
     });
   } catch (error) {
     console.error('Error al consultar publicaciones:', error);
@@ -225,184 +327,440 @@ app.get('/api/publications', async (req, res) => {
 });
 
 // ==========================================
-// 3. ENDPOINTS DE FAVORITOS (FEATURE 11)
+// 2b. PUBLICAR Y GESTIONAR PUBLICACIONES (PUNTO 5)
 // ==========================================
 
-// Agregar a favoritos
-app.post('/api/favorites', async (req, res) => {
-  const { userId, publicationId } = req.body;
+const ESTADOS_VALIDOS = ['activa', 'pausada', 'vendida'];
+const CONDICIONES_VALIDAS = ['nuevo', 'como nuevo', 'usado'];
+const MAX_FOTOS = 5;
 
-  if (!userId || !publicationId) {
-    return res.status(400).json({ success: false, message: 'Faltan userId o publicationId' });
+// Crear una publicacion, con sus fotos.
+app.post('/api/publications', requireAuth, async (req, res) => {
+  const { userId, title, description, price, condition, category, zone, photos } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: 'Falta el usuario que publica' });
+  }
+  if (!title || !title.trim()) {
+    return res.status(400).json({ success: false, message: 'El título es obligatorio' });
+  }
+  const precio = Number(price);
+  if (!Number.isFinite(precio) || precio < 0) {
+    return res.status(400).json({ success: false, message: 'El precio no es válido' });
+  }
+  if (!CONDICIONES_VALIDAS.includes(condition)) {
+    return res.status(400).json({ success: false, message: 'El estado del artículo no es válido' });
+  }
+  const fotos = Array.isArray(photos) ? photos : [];
+  if (fotos.length > MAX_FOTOS) {
+    return res.status(400).json({ success: false, message: `Como máximo ${MAX_FOTOS} fotos` });
   }
 
   try {
-    const result = await db.run(
-      'INSERT INTO favorites (userId, publicationId) VALUES (?, ?)',
-      [userId, publicationId]
-    );
-
-    res.json({
-      id: result.lastID,
-      userId,
-      publicationId,
-      savedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    if (error.message.includes('UNIQUE constraint failed')) {
-      return res.status(400).json({ success: false, message: 'Ya está en favoritos' });
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
-    console.error('Error en POST /api/favorites:', error);
+
+    const insert = await db.run(
+      `INSERT INTO publications (title, description, price, condition, category, zone, user_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'activa')`,
+      [title.trim(), description || null, precio, condition, category || null, zone || null, userId]
+    );
+
+    for (let i = 0; i < fotos.length; i++) {
+      await db.run(
+        'INSERT INTO publication_photos (publication_id, data, position) VALUES (?, ?, ?)',
+        [insert.lastID, fotos[i], i]
+      );
+    }
+
+    const creada = await db.get('SELECT * FROM publications WHERE id = ?', [insert.lastID]);
+    res.status(201).json({ ...creada, photo_count: fotos.length });
+  } catch (error) {
+    console.error('Error en POST /api/publications', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Obtener favoritos del usuario
-app.get('/api/favorites', async (req, res) => {
-  const { userId } = req.query;
+// "Mis publicaciones": todas las del usuario, en cualquier estado.
+// Se diferencia del perfil publico, que solo lista las activas.
+app.get('/api/users/:id/publications', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT p.*, (SELECT COUNT(*) FROM publication_photos ph
+                     WHERE ph.publication_id = p.id) AS photo_count
+         FROM publications p
+        WHERE p.user_id = ?
+        ORDER BY p.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/users/:id/publications', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
-  if (!userId) {
-    return res.status(400).json({ success: false, message: 'Falta userId' });
+// Pausar / reactivar / marcar vendida.
+app.patch('/api/publications/:id/status', requireAuth, async (req, res) => {
+  const { status } = req.body;
+
+  if (!ESTADOS_VALIDOS.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: `El estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}`
+    });
   }
 
   try {
-    const favorites = await db.all(`
-      SELECT f.id, f.userId, f.publicationId, f.savedAt,
-             p.id as 'publication.id', p.title as 'publication.title',
-             p.description as 'publication.description', p.price as 'publication.price',
-             p.condition as 'publication.condition', p.category as 'publication.category',
-             p.zone as 'publication.zone', p.created_at as 'publication.created_at'
-      FROM favorites f
-      LEFT JOIN publications p ON f.publicationId = p.id
-      WHERE f.userId = ?
-      ORDER BY f.savedAt DESC
-    `, [userId]);
+    const publicacion = await db.get('SELECT * FROM publications WHERE id = ?', [req.params.id]);
+    if (!publicacion) {
+      return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
+    }
 
-    // Restructurar datos para que coincida con el modelo Favorite de Android
-    const restructured = favorites.map(f => ({
-      id: f.id,
-      userId: f.userId,
-      publicationId: f.publicationId,
-      savedAt: f.savedAt,
-      publication: {
-        id: f['publication.id'],
-        title: f['publication.title'],
-        description: f['publication.description'],
-        price: f['publication.price'],
-        condition: f['publication.condition'],
-        category: f['publication.category'],
-        zone: f['publication.zone'],
-        created_at: f['publication.created_at']
-      }
-    }));
-
-    res.json({
-      success: true,
-      data: restructured
-    });
+    await db.run('UPDATE publications SET status = ? WHERE id = ?', [status, req.params.id]);
+    res.json({ ...publicacion, status });
   } catch (error) {
-    console.error('Error en GET /api/favorites:', error);
+    console.error('Error en PATCH /api/publications/:id/status', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Eliminar favorito
-app.delete('/api/favorites/:id', async (req, res) => {
+// Fotos de una publicacion. Endpoint aparte a proposito: los listados no
+// arrastran base64. El detalle del punto 4 consume este mismo endpoint.
+// ==========================================
+// 2.b DETALLE DE LA PUBLICACION (PUNTO 4)
+// ==========================================
+
+/** Trae la publicacion con su vendedor, o null si no existe. */
+async function getPublicacionConVendedor(id) {
+  const publication = await db.get(
+    `SELECT p.*,
+            u.name AS seller_name,
+            (SELECT COUNT(*) FROM publication_photos WHERE publication_id = p.id) AS photo_count
+       FROM publications p
+       LEFT JOIN users u ON u.id = p.user_id
+      WHERE p.id = ?`,
+    [id]
+  );
+  return publication || null;
+}
+
+// Detalle completo: la publicacion mas los datos del vendedor con su reputacion,
+// que es lo que permite decidir si conviene operar sin salir de la pantalla.
+app.get('/api/publications/:id', requireAuth, async (req, res) => {
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+
+    let seller = null;
+    if (publication.user_id) {
+      const usuario = await db.get(
+        'SELECT id, name, zone, created_at FROM users WHERE id = ?',
+        [publication.user_id]
+      );
+      if (usuario) {
+        seller = { ...usuario, reputation: await getReputation(usuario.id) };
+      }
+    }
+
+    res.json({ publication, seller });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Preguntas de la publicacion. Las ve cualquiera que mire el detalle: son
+// publicas, como en cualquier marketplace.
+app.get('/api/publications/:id/questions', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      `SELECT q.id, q.text, q.created_at, q.user_id, u.name AS user_name
+         FROM questions q
+         LEFT JOIN users u ON u.id = q.user_id
+        WHERE q.publication_id = ?
+        ORDER BY q.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/questions', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/publications/:id/questions', requireAuth, async (req, res) => {
+  const texto = (req.body.text || '').trim();
+  if (!texto) {
+    return res.status(400).json({ success: false, message: 'La pregunta no puede estar vacia' });
+  }
+
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    // El duenio gestiona su publicacion; preguntar es la accion del interesado.
+    if (publication.user_id === req.userId) {
+      return res.status(400).json({ success: false, message: 'No podes preguntar en tu propia publicacion' });
+    }
+
+    const { lastID } = await db.run(
+      'INSERT INTO questions (publication_id, user_id, text) VALUES (?, ?, ?)',
+      [publication.id, req.userId, texto]
+    );
+    const creada = await db.get(
+      `SELECT q.id, q.text, q.created_at, q.user_id, u.name AS user_name
+         FROM questions q LEFT JOIN users u ON u.id = q.user_id
+        WHERE q.id = ?`,
+      [lastID]
+    );
+    res.status(201).json(creada);
+  } catch (error) {
+    console.error('Error en POST /api/publications/:id/questions', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Las ofertas las ve solo el vendedor: son parte de la gestion de su publicacion.
+app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    if (publication.user_id !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Solo el vendedor ve las ofertas' });
+    }
+
+    const rows = await db.all(
+      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o
+         LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.publication_id = ?
+        ORDER BY o.amount DESC, o.created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
+  const monto = Number(req.body.amount);
+  if (!Number.isFinite(monto) || monto <= 0) {
+    return res.status(400).json({ success: false, message: 'El monto ofertado no es valido' });
+  }
+
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+    if (publication.user_id === req.userId) {
+      return res.status(400).json({ success: false, message: 'No podes ofertar en tu propia publicacion' });
+    }
+    if (publication.status !== 'activa') {
+      return res.status(400).json({ success: false, message: 'La publicacion no esta activa' });
+    }
+
+    const { lastID } = await db.run(
+      'INSERT INTO offers (publication_id, user_id, amount) VALUES (?, ?, ?)',
+      [publication.id, req.userId, monto]
+    );
+    const creada = await db.get(
+      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.id = ?`,
+      [lastID]
+    );
+    res.status(201).json(creada);
+  } catch (error) {
+    console.error('Error en POST /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.get('/api/publications/:id/photos', requireAuth, async (req, res) => {
+  try {
+    const rows = await db.all(
+      'SELECT id, data, position FROM publication_photos WHERE publication_id = ? ORDER BY position',
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/photos', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ==========================================
+// 3. ENDPOINTS DE PERFIL Y REPUTACION
+// ==========================================
+
+/**
+ * Reputacion de un usuario, derivada de las calificaciones recibidas:
+ * promedio de estrellas y cantidad de operaciones concretadas en cada rol.
+ */
+async function getReputation(userId) {
+  const row = await db.get(
+    `SELECT COUNT(*) AS totalRatings,
+            AVG(stars) AS average,
+            SUM(CASE WHEN role = 'vendedor'  THEN 1 ELSE 0 END) AS salesCount,
+            SUM(CASE WHEN role = 'comprador' THEN 1 ELSE 0 END) AS purchasesCount
+       FROM ratings
+      WHERE rated_user_id = ?`,
+    [userId]
+  );
+
+  return {
+    // Se redondea a un decimal para que el cliente muestre "4.5" sin hacer cuentas.
+    average: row && row.average ? Math.round(row.average * 10) / 10 : 0,
+    totalRatings: (row && row.totalRatings) || 0,
+    salesCount: (row && row.salesCount) || 0,
+    purchasesCount: (row && row.purchasesCount) || 0
+  };
+}
+
+// Perfil de un usuario: datos personales + reputacion + publicaciones activas.
+app.get('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
 
-  if (!id) {
-    return res.status(400).json({ success: false, message: 'Falta id del favorito' });
-  }
-
   try {
-    await db.run('DELETE FROM favorites WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Favorito eliminado' });
-  } catch (error) {
-    console.error('Error en DELETE /api/favorites/:id:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+    const user = await db.get(
+      'SELECT id, name, email, phone, zone, created_at FROM users WHERE id = ?',
+      [id]
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
 
-// ==========================================
-// 4. ENDPOINTS DE BÚSQUEDAS GUARDADAS
-// ==========================================
-
-// Guardar búsqueda
-app.post('/api/saved-searches', async (req, res) => {
-  const { userId, searchTerm, category, minPrice, maxPrice, condition, zone, sort } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ success: false, message: 'Falta userId' });
-  }
-
-  try {
-    const result = await db.run(`
-      INSERT INTO saved_searches (userId, searchTerm, category, minPrice, maxPrice, condition, zone, sort)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [userId, searchTerm || null, category || null, minPrice || null, maxPrice || null, condition || null, zone || null, sort || 'recent']);
-
-    res.json({
-      id: result.lastID,
-      userId,
-      searchTerm,
-      category,
-      minPrice,
-      maxPrice,
-      condition,
-      zone,
-      sort: sort || 'recent',
-      createdAt: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error en POST /api/saved-searches:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
-
-// Obtener búsquedas guardadas
-app.get('/api/saved-searches', async (req, res) => {
-  const { userId } = req.query;
-
-  if (!userId) {
-    return res.status(400).json({ success: false, message: 'Falta userId' });
-  }
-
-  try {
-    const searches = await db.all(
-      'SELECT * FROM saved_searches WHERE userId = ? ORDER BY createdAt DESC',
-      [userId]
+    const reputation = await getReputation(id);
+    const activePublications = await db.all(
+      `SELECT * FROM publications
+        WHERE user_id = ? AND status = 'activa'
+        ORDER BY created_at DESC`,
+      [id]
     );
 
     res.json({
-      success: true,
-      data: searches
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      zone: user.zone,
+      // "Antiguedad en la plataforma" se calcula en el cliente a partir de esta fecha.
+      createdAt: user.created_at,
+      reputation,
+      activePublications
     });
   } catch (error) {
-    console.error('Error en GET /api/saved-searches:', error);
+    console.error('Error en GET /api/users/:id', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// Eliminar búsqueda guardada
-app.delete('/api/saved-searches/:id', async (req, res) => {
+// Editar los datos personales del perfil.
+app.put('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
+  const { name, email, phone, zone } = req.body;
 
-  if (!id) {
-    return res.status(400).json({ success: false, message: 'Falta id de la búsqueda' });
+  if (!name || !name.trim()) {
+    return res.status(400).json({ success: false, message: 'El nombre no puede quedar vacío' });
+  }
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'El email no es válido' });
   }
 
   try {
-    await db.run('DELETE FROM saved_searches WHERE id = ?', [id]);
-    res.json({ success: true, message: 'Búsqueda eliminada' });
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // El email es UNIQUE: se avisa con 409 en vez de dejar explotar el constraint.
+    if (email) {
+      const enUso = await db.get('SELECT id FROM users WHERE email = ? AND id <> ?', [email, id]);
+      if (enUso) {
+        return res.status(409).json({ success: false, message: 'Ese email ya está en uso' });
+      }
+    }
+
+    await db.run(
+      'UPDATE users SET name = ?, email = ?, phone = ?, zone = ? WHERE id = ?',
+      [name.trim(), email || null, phone || null, zone || null, id]
+    );
+
+    const actualizado = await db.get(
+      'SELECT id, name, email, phone, zone, created_at FROM users WHERE id = ?',
+      [id]
+    );
+
+    res.json({
+      id: actualizado.id,
+      name: actualizado.name,
+      email: actualizado.email,
+      phone: actualizado.phone,
+      zone: actualizado.zone,
+      createdAt: actualizado.created_at,
+      reputation: await getReputation(id),
+      activePublications: []
+    });
   } catch (error) {
-    console.error('Error en DELETE /api/saved-searches/:id:', error);
+    console.error('Error en PUT /api/users/:id', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`===================================================`);
-  console.log(`✅ Backend Unificado de Ronda corriendo en http://localhost:${PORT}`);
-  console.log(`📲 Base URL para Android Emulator: http://10.0.2.2:${PORT}/api/`);
-  console.log(`===================================================`);
+// Calificar a un usuario. La reputacion sale de aca; emitir la calificacion al
+// cerrar una operacion es parte del flujo de los puntos 4 y 5.
+app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { stars, role, comment, raterUserId } = req.body;
+
+  const estrellas = parseInt(stars, 10);
+  if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
+    return res.status(400).json({ success: false, message: 'Las estrellas deben ir de 1 a 5' });
+  }
+  if (role !== 'vendedor' && role !== 'comprador') {
+    return res.status(400).json({ success: false, message: "El rol debe ser 'vendedor' o 'comprador'" });
+  }
+
+  try {
+    const user = await db.get('SELECT id FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    await db.run(
+      'INSERT INTO ratings (rated_user_id, rater_user_id, stars, role, comment) VALUES (?, ?, ?, ?, ?)',
+      [id, raterUserId || null, estrellas, role, comment || null]
+    );
+
+    res.status(201).json({ success: true, reputation: await getReputation(id) });
+  } catch (error) {
+    console.error('Error en POST /api/users/:id/ratings', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
+
+// Se espera a que el esquema termine de migrar antes de atender pedidos.
+db.ready
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`===================================================`);
+      console.log(`✅ Backend Unificado de Ronda corriendo en http://localhost:${PORT}`);
+      console.log(`📲 Base URL para Android Emulator: http://10.0.2.2:${PORT}/api/`);
+      console.log(`===================================================`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ No se pudo inicializar la base, el servidor no arranca:', err.message);
+    process.exit(1);
+  });

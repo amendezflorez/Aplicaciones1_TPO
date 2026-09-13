@@ -10,39 +10,57 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.Publication;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.PublicationViewHolder> {
 
+    /** Aviso de que se tocó el vendedor de una publicación, para abrir su perfil público. */
+    public interface OnSellerClickListener {
+        void onSellerClick(Publication publication);
+    }
+
+    /** Aviso de que se tocó la publicación entera, para abrir su detalle (punto 4). */
+    public interface OnPublicationClickListener {
+        void onPublicationClick(Publication publication);
+    }
+
+    /** Listener para acciones con favoritos (Punto 11). */
+    public interface OnPublicationActionListener {
+        void onFavoriteClicked(Publication publication, boolean isFavorite);
+    }
+
     private List<Publication> publications = new ArrayList<>();
-    private Set<Integer> favoriteIds = new HashSet<>();
+    private OnSellerClickListener sellerClickListener;
+    private OnPublicationClickListener publicationClickListener;
     private OnPublicationActionListener actionListener;
 
-    public void setPublications(List<Publication> publications) {
-        this.publications = (publications != null) ? publications : new ArrayList<>();
-        notifyDataSetChanged();
+    public void setOnSellerClickListener(OnSellerClickListener listener) {
+        this.sellerClickListener = listener;
+    }
+
+    public void setOnPublicationClickListener(OnPublicationClickListener listener) {
+        this.publicationClickListener = listener;
     }
 
     public void setActionListener(OnPublicationActionListener listener) {
         this.actionListener = listener;
     }
 
-    public void updateFavorites(Set<Integer> favorites) {
-        this.favoriteIds = new HashSet<>(favorites);
+    public void setPublications(List<Publication> publications) {
+        this.publications = (publications != null) ? new ArrayList<>(publications) : new ArrayList<>();
         notifyDataSetChanged();
     }
 
-    public void addFavorite(int publicationId) {
-        favoriteIds.add(publicationId);
-        notifyDataSetChanged();
+    public void addPublications(List<Publication> nuevas) {
+        if (nuevas == null || nuevas.isEmpty()) return;
+        int desde = publications.size();
+        publications.addAll(nuevas);
+        notifyItemRangeInserted(desde, nuevas.size());
     }
 
-    public void removeFavorite(int publicationId) {
-        favoriteIds.remove(publicationId);
-        notifyDataSetChanged();
+    public int getItemCountLoaded() {
+        return publications.size();
     }
 
     @NonNull
@@ -56,6 +74,10 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     @Override
     public void onBindViewHolder(@NonNull PublicationViewHolder holder, int position) {
         Publication pub = publications.get(position);
+
+        holder.itemView.setOnClickListener(publicationClickListener == null ? null
+                : v -> publicationClickListener.onPublicationClick(pub));
+
         holder.tvTitle.setText(pub.getTitle() != null ? pub.getTitle() : "");
         holder.tvPrice.setText(String.format(Locale.getDefault(), "$ %.2f", pub.getPrice()));
 
@@ -73,21 +95,33 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
             holder.tvZone.setVisibility(View.GONE);
         }
 
-        // Actualizar estado del botón de favorito
-        boolean isFavorite = favoriteIds.contains(pub.getId());
-        holder.btnFavorite.setSelected(isFavorite);
+        bindVendedor(holder, pub);
+
+        // Botón de favorito (Punto 11)
         holder.btnFavorite.setOnClickListener(v -> {
             if (actionListener != null) {
-                actionListener.onFavoriteClicked(pub, !isFavorite);
+                actionListener.onFavoriteClicked(pub, true);
             }
         });
+    }
 
-        // Listener para click en el item (ir a detalle)
-        holder.itemView.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onPublicationClicked(pub);
-            }
-        });
+    private void bindVendedor(PublicationViewHolder holder, Publication pub) {
+        boolean hayVendedor = pub.getSellerName() != null && !pub.getSellerName().isEmpty();
+        if (!hayVendedor) {
+            holder.tvSeller.setVisibility(View.GONE);
+            holder.tvSeller.setOnClickListener(null);
+            return;
+        }
+
+        holder.tvSeller.setVisibility(View.VISIBLE);
+        holder.tvSeller.setText(holder.itemView.getContext()
+                .getString(R.string.publication_seller, pub.getSellerName()));
+
+        boolean navegable = sellerClickListener != null && pub.getUserId() != null;
+        holder.tvSeller.setClickable(navegable);
+        holder.tvSeller.setOnClickListener(navegable
+                ? v -> sellerClickListener.onSellerClick(pub)
+                : null);
     }
 
     @Override
@@ -96,7 +130,7 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     }
 
     static class PublicationViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvPrice, tvCondition, tvZone;
+        TextView tvTitle, tvPrice, tvCondition, tvZone, tvSeller;
         ImageButton btnFavorite;
 
         public PublicationViewHolder(@NonNull View itemView) {
@@ -105,13 +139,8 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
             tvPrice = itemView.findViewById(R.id.tvPrice);
             tvCondition = itemView.findViewById(R.id.tvCondition);
             tvZone = itemView.findViewById(R.id.tvZone);
+            tvSeller = itemView.findViewById(R.id.tvSeller);
             btnFavorite = itemView.findViewById(R.id.btnFavorite);
         }
-    }
-
-    // Interface para manejar acciones en las publicaciones
-    public interface OnPublicationActionListener {
-        void onPublicationClicked(Publication publication);
-        void onFavoriteClicked(Publication publication, boolean isFavorite);
     }
 }

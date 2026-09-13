@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RondaApp</string>
 
@@ -32,13 +33,14 @@
     <!-- Home & Logout -->
     <string name="home_welcome">¡Bienvenido, %1$s!</string>
     <string name="home_logout">Cerrar sesión</string>
+    <string name="home_my_profile">Mi perfil</string>
     <string name="logout_dialog_title">¿Cerrar sesión?</string>
     <string name="logout_dialog_message">¿Estás seguro de que deseás cerrar la sesión actual?</string>
     <string name="logout_dialog_confirm">Cerrar sesión</string>
     <string name="logout_dialog_cancel">Cancelar</string>
     <string name="logout_success_toast">Sesión cerrada exitosamente</string>
 
-    <!-- Favoritos & Búsquedas Guardadas (Feature 11) -->
+    <!-- Favoritos & Búsquedas Guardadas (Punto 11) -->
     <string name="favorite_button">Agregar a favoritos</string>
     <string name="remove_favorite">Eliminar de favoritos</string>
     <string name="no_favorites">No tienes publicaciones favoritas</string>
@@ -52,4 +54,136 @@
     <string name="execute_search">Ejecutar</string>
     <string name="delete_search">Eliminar búsqueda</string>
     <string name="error_session_expired">Sesión expirada</string>
+    <string name="publication_seller">Vendedor: %1$s</string>
+
+    <!-- Perfil y reputación -->
+    <string name="profile_my_title">Mis datos</string>
+    <string name="profile_name_hint">Nombre</string>
+    <string name="profile_email_hint">Email</string>
+    <string name="profile_phone_hint">Teléfono de contacto</string>
+    <string name="profile_zone_hint">Zona</string>
+    <string name="profile_save">Guardar cambios</string>
+    <string name="profile_saved">Perfil actualizado</string>
+    <string name="profile_error_empty_name">El nombre no puede quedar vacío</string>
+    <string name="profile_error_load">No pudimos cargar el perfil</string>
+    <string name="profile_error_save">No pudimos guardar los cambios</string>
+
+    <string name="reputation_title">Reputación</string>
+    <string name="reputation_average">%1$s ★</string>
+    <string name="reputation_ratings_count">%1$d calificaciones</string>
+    <string name="reputation_none">Todavía sin calificaciones</string>
+    <string name="reputation_operations">%1$d ventas · %2$d compras</string>
+
+    <string name="public_profile_member_since">Miembro desde %1$s</string>
+    <string name="public_profile_seniority_days">Hace menos de un mes en Ronda</string>
+    <string name="public_profile_seniority_months">%1$d meses en Ronda</string>
+    <string name="public_profile_seniority_years">%1$d año(s) en Ronda</string>
+    <string name="public_profile_zone">Zona: %1$s</string>
+    <string name="public_profile_active_publications">Publicaciones activas (%1$d)</string>
+    <string name="public_profile_no_publications">Este usuario no tiene publicaciones activas</string>
+
+    <!-- Filtro de cercanía (punto 3) -->
+    <string name="filter_near_my_zone">Solo cerca de mi zona</string>
+    <string name="filter_near_zone_hint">Tu zona: %1$s. Incluye también los barrios linderos.</string>
+    <string name="filter_near_zone_missing">Cargá tu zona en «Mi perfil» para usar este filtro.</string>
+
+    <!-- Publicar un artículo (punto 5) -->
+    <string name="home_publish">Publicar</string>
+    <string name="home_my_publications">Mis publicaciones</string>
+    <string name="publish_step_title">Paso %1$d de %2$d · %3$s</string>
+    <string name="publish_step_photos">Fotos</string>
+    <string name="publish_step_data">Qué vendés</string>
+    <string name="publish_step_price">Precio y entrega</string>
+    <string name="publish_hint_photos">Elegí hasta %1$d fotos de tu galería. Son opcionales.</string>
+    <string name="publish_hint_data">Contá qué es y en qué categoría entra.</string>
+    <string name="publish_hint_price">Poné el precio, el estado del artículo y dónde lo entregás.</string>
+    <string name="publish_add_photos">Agregar fotos</string>
+    <string name="publish_no_photos">Todavía no agregaste fotos.</string>
+    <string name="publish_photo_position">Foto %1$d</string>
+    <string name="publish_photo_description">Foto del artículo</string>
+    <string name="publish_remove_photo">Quitar</string>
+    <string name="publish_title_hint">Título</string>
+    <string name="publish_description_hint">Descripción</string>
+    <string name="publish_category_label">Categoría</string>
+    <string name="publish_price_hint">Precio</string>
+    <string name="publish_condition_label">Estado del artículo</string>
+    <string name="publish_zone_hint">Zona de entrega</string>
+    <string name="publish_back">Atrás</string>
+    <string name="publish_next">Siguiente</string>
+    <string name="publish_submit">Publicar</string>
+    <string name="publish_success">¡Publicado!</string>
+    <string name="publish_draft_restored">Retomamos tu borrador</string>
+    <string name="publish_discard_draft">Descartar borrador</string>
+    <string name="publish_discard_title">¿Descartar el borrador?</string>
+    <string name="publish_discard_message">Se van a borrar los datos y las fotos que cargaste.</string>
+    <string name="publish_discard_confirm">Descartar</string>
+    <string name="publish_discarded">Borrador descartado</string>
+    <string name="publish_error_title">Poné un título</string>
+    <string name="publish_error_price">Poné un precio</string>
+    <string name="publish_error_price_invalid">El precio no es válido</string>
+    <string name="publish_error_photo">No pudimos usar alguna de las fotos</string>
+    <string name="publish_error_max_photos">Ya llegaste al máximo de %1$d fotos</string>
+    <string name="publish_error_generic">No pudimos publicar. Intentá de nuevo.</string>
+
+    <!-- Mis publicaciones (punto 5) -->
+    <string name="my_publications_title">Mis publicaciones</string>
+    <string name="my_publications_empty">Todavía no publicaste nada.</string>
+    <string name="my_publications_publish_new">Publicar un artículo</string>
+    <string name="my_publications_error">No pudimos cargar tus publicaciones</string>
+    <string name="my_publications_error_status">No pudimos cambiar el estado</string>
+    <string name="my_publication_pause">Pausar</string>
+    <string name="my_publication_reactivate">Reactivar</string>
+    <string name="my_publication_paused">Publicación pausada</string>
+    <string name="my_publication_reactivated">Publicación reactivada</string>
+
+    <!-- Modo sin conexión (punto 6) -->
+    <string name="offline_banner">Sin conexión · mostrando lo último que se cargó (%1$s). La información puede no estar actualizada.</string>
+    <string name="offline_banner_no_cache">Sin conexión y todavía no hay nada guardado para mostrar.</string>
+    <string name="offline_reconnected">Volvió la conexión, actualizando…</string>
+    <string name="offline_action_needs_connection">Necesitás conexión para hacer esto.</string>
+    <string name="offline_just_now">recién</string>
+    <string name="offline_minutes_ago">hace %1$d min</string>
+    <string name="offline_hours_ago">hace %1$d h</string>
+    <string name="offline_days_ago">hace %1$d días</string>
+
+    <plurals name="my_publication_photos">
+        <item quantity="one">%d foto</item>
+        <item quantity="other">%d fotos</item>
+    </plurals>
+
+    <!-- Punto 4: detalle de la publicación -->
+    <string name="detail_title">Detalle de la publicación</string>
+    <string name="detail_loading_error">No pudimos cargar la publicación</string>
+    <string name="detail_no_photos">Esta publicación no tiene fotos</string>
+    <string name="detail_photo_position">%1$d de %2$d</string>
+    <string name="detail_description_label">Descripción</string>
+    <string name="detail_no_description">Sin descripción</string>
+    <string name="detail_published_on">Publicado el %1$s</string>
+    <string name="detail_category">Categoría: %1$s</string>
+    <string name="detail_status">Estado de la publicación: %1$s</string>
+    <string name="detail_seller_label">Vendedor</string>
+    <string name="detail_view_profile">Ver perfil público</string>
+    <string name="detail_ask">Preguntar</string>
+    <string name="detail_offer">Ofertar</string>
+    <string name="detail_ask_title">Preguntar al vendedor</string>
+    <string name="detail_ask_hint">Escribí tu pregunta</string>
+    <string name="detail_ask_sent">Pregunta enviada</string>
+    <string name="detail_ask_error">No pudimos enviar tu pregunta</string>
+    <string name="detail_offer_title">Hacer una oferta</string>
+    <string name="detail_offer_hint">Monto que ofrecés</string>
+    <string name="detail_offer_sent">Oferta enviada</string>
+    <string name="detail_offer_error">No pudimos enviar tu oferta</string>
+    <string name="detail_offer_invalid">Ingresá un monto válido</string>
+    <string name="detail_send">Enviar</string>
+    <string name="detail_cancel">Cancelar</string>
+    <string name="detail_questions_title">Preguntas (%1$d)</string>
+    <string name="detail_no_questions">Todavía no hay preguntas.</string>
+    <string name="detail_question_author">%1$s · %2$s</string>
+    <string name="detail_offers_title">Ofertas recibidas (%1$d)</string>
+    <string name="detail_no_offers">Todavía no recibiste ofertas.</string>
+    <string name="detail_offer_row">%1$s ofertó $ %2$s</string>
+    <string name="detail_mark_sold">Marcar vendida</string>
+    <string name="detail_sold">Publicación marcada como vendida</string>
+    <string name="detail_status_error">No pudimos cambiar el estado</string>
+    <string name="detail_offline">Sin conexión · estás viendo lo último que se guardó de esta publicación.</string>
 </resources>
