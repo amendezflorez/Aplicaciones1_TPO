@@ -40,6 +40,14 @@
         <action
             android:id="@+id/action_home_to_detail"
             app:destination="@id/publicationDetailFragment" />
+
+        <action
+            android:id="@+id/action_home_to_favorites"
+            app:destination="@id/favoritesFragment" />
+
+        <action
+            android:id="@+id/action_home_to_savedSearches"
+            app:destination="@id/savedSearchesFragment" />
     </fragment>
 
     <!-- Punto 5: carga guiada para publicar un artículo -->
@@ -110,5 +118,18 @@
             app:argType="string"
             android:defaultValue="" />
     </fragment>
+
+    <!-- Punto 11: Favoritos y Búsquedas Guardadas -->
+    <fragment
+        android:id="@+id/favoritesFragment"
+        android:name="com.example.rondaapp.ui.favorites.FavoritesFragment"
+        android:label="Mis favoritos"
+        tools:layout="@layout/fragment_favorites" />
+
+    <fragment
+        android:id="@+id/savedSearchesFragment"
+        android:name="com.example.rondaapp.ui.favorites.SavedSearchesFragment"
+        android:label="Búsquedas guardadas"
+        tools:layout="@layout/fragment_saved_searches" />
 
 </navigation>
