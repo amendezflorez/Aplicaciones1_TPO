@@ -250,6 +250,11 @@ async function init() {
   await ensureColumn('publications', 'user_id', 'TEXT');
   await ensureColumn('publications', 'status', "TEXT NOT NULL DEFAULT 'activa'");
 
+  // Punto 11: desde cuando contar "publicaciones nuevas" de una busqueda
+  // guardada. Se actualiza al ejecutarla; mientras sea NULL cuenta desde que se
+  // guardo (savedAt). camelCase como el resto de la tabla.
+  await ensureColumn('saved_searches', 'lastSeenAt', 'DATETIME');
+
   await dbAsync.run(
     'CREATE INDEX IF NOT EXISTS idx_photos_publication ON publication_photos (publication_id, position)'
   );

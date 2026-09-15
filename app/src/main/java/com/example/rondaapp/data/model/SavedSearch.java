@@ -33,6 +33,13 @@ public class SavedSearch {
     @SerializedName("createdAt")
     private String createdAt;
 
+    /**
+     * Punto 11: publicaciones que coinciden con la búsqueda y aparecieron desde
+     * la última vez que se ejecutó. Lo calcula el backend; la app solo lo muestra.
+     */
+    @SerializedName("newCount")
+    private int newCount;
+
     public SavedSearch() {
     }
 
@@ -120,5 +127,9 @@ public class SavedSearch {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public int getNewCount() {
+        return newCount;
     }
 }

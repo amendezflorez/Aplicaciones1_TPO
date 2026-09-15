@@ -23,6 +23,17 @@
             android:textStyle="bold"
             android:textColor="@android:color/black" />
 
+        <!-- Punto 11: indicador de novedad, mismo estilo que el de precio en favoritos -->
+        <TextView
+            android:id="@+id/tvNewResults"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="#1565C0"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tvFilters"
             android:layout_width="match_parent"
