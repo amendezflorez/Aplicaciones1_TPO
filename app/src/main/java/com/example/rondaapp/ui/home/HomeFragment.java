@@ -96,6 +96,11 @@ public class HomeFragment extends Fragment {
     private int currentPage = 1;
     private boolean isLoading = false;
     private boolean hasMore = true;
+    /**
+     * Numera las recargas desde cero. Una respuesta que llega con un número
+     * viejo es de un pedido que otra recarga ya reemplazó, y se descarta.
+     */
+    private int generacion = 0;
 
     @Nullable
     @Override
@@ -496,13 +501,19 @@ public class HomeFragment extends Fragment {
     }
 
     private void fetchPublications(boolean reset) {
-        if (isLoading) return;
+        // Una recarga desde cero reemplaza a la que esté en vuelo en vez de
+        // descartarse. Al volver de ejecutar una búsqueda guardada, onViewCreated
+        // ya pidió el listado con los filtros viejos: si el pedido con los filtros
+        // nuevos se tiraba, quedaba en pantalla el Home sin filtrar. La paginación
+        // sí espera, para no pedir dos veces la misma página.
+        if (isLoading && !reset) return;
         if (!reset && !hasMore) return;
 
         if (reset) {
             currentPage = 1;
             hasMore = true;
         }
+        final int miGeneracion = reset ? ++generacion : generacion;
 
         // Punto 6: sin conexión no tiene sentido esperar el timeout de la request.
         if (!connectivityWatcher.hayConexion()) {
@@ -529,6 +540,9 @@ public class HomeFragment extends Fragment {
             @Override
             public void onResponse(Call<PublicationResponse> call, Response<PublicationResponse> response) {
                 if (!isAdded() || getView() == null) return; // la vista ya se destruyó
+                // La reemplazó una recarga posterior: su resultado no corresponde a
+                // los filtros actuales, y el estado de carga ya es de la otra.
+                if (miGeneracion != generacion) return;
                 isLoading = false;
                 mostrarProgreso(false);
 
@@ -568,6 +582,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onFailure(Call<PublicationResponse> call, Throwable t) {
                 if (!isAdded() || getView() == null) return;
+                if (miGeneracion != generacion) return;
                 isLoading = false;
                 mostrarProgreso(false);
 
