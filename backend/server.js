@@ -757,7 +757,17 @@ app.put('/api/users/:id', requireAuth, async (req, res) => {
 // cerrar una operacion es parte del flujo de los puntos 4 y 5.
 app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { stars, role, comment, raterUserId } = req.body;
+  const { stars, role, comment } = req.body;
+
+  // Quien califica sale del token, igual que el autor de una publicacion.
+  // Tomarlo del body dejaba firmar una calificacion a nombre de cualquiera.
+  const raterUserId = req.userId;
+
+  // La reputacion del punto 2 es lo que opinan los demas: calificarse a uno
+  // mismo es inflarla.
+  if (id === raterUserId) {
+    return res.status(400).json({ success: false, message: 'No podes calificarte a vos mismo' });
+  }
 
   const estrellas = parseInt(stars, 10);
   if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
@@ -775,7 +785,7 @@ app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
 
     await db.run(
       'INSERT INTO ratings (rated_user_id, rater_user_id, stars, role, comment) VALUES (?, ?, ?, ?, ?)',
-      [id, raterUserId || null, estrellas, role, comment || null]
+      [id, raterUserId, estrellas, role, comment || null]
     );
 
     res.status(201).json({ success: true, reputation: await getReputation(id) });
