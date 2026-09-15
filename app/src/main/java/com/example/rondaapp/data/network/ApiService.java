@@ -143,4 +143,8 @@ public interface ApiService {
 
     @DELETE("saved-searches/{id}")
     Call<SimpleResponse> deleteSavedSearch(@Path("id") int searchId);
+
+    /** Punto 11: las novedades de la búsqueda se vuelven a contar desde ahora. */
+    @PATCH("saved-searches/{id}/seen")
+    Call<SimpleResponse> markSavedSearchSeen(@Path("id") int searchId);
 }

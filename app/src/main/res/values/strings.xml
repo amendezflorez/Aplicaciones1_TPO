@@ -151,6 +151,10 @@
     <string name="offline_hours_ago">hace %1$d h</string>
     <string name="offline_days_ago">hace %1$d días</string>
 
+    <plurals name="saved_search_new_results">
+        <item quantity="one">● %d publicación nueva</item>
+        <item quantity="other">● %d publicaciones nuevas</item>
+    </plurals>
     <plurals name="my_publication_photos">
         <item quantity="one">%d foto</item>
         <item quantity="other">%d fotos</item>

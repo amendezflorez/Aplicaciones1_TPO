@@ -49,6 +49,17 @@ public class SavedSearchAdapter extends RecyclerView.Adapter<SavedSearchAdapter.
 
         holder.tvSearchTerm.setText(search.getSearchTerm() != null ? search.getSearchTerm() : "Sin término");
 
+        // Punto 11: indicador de novedad — publicaciones que coinciden con la
+        // búsqueda y aparecieron desde la última vez que se ejecutó.
+        int nuevas = search.getNewCount();
+        if (nuevas > 0) {
+            holder.tvNewResults.setText(holder.itemView.getContext().getResources()
+                    .getQuantityString(R.plurals.saved_search_new_results, nuevas, nuevas));
+            holder.tvNewResults.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvNewResults.setVisibility(View.GONE);
+        }
+
         StringBuilder filters = new StringBuilder();
         if (search.getCategory() != null) {
             filters.append("Categoría: ").append(search.getCategory()).append(" • ");
@@ -96,13 +107,14 @@ public class SavedSearchAdapter extends RecyclerView.Adapter<SavedSearchAdapter.
     }
 
     static class SavedSearchViewHolder extends RecyclerView.ViewHolder {
-        TextView tvSearchTerm, tvFilters;
+        TextView tvSearchTerm, tvNewResults, tvFilters;
         Button btnExecute;
         ImageButton btnDelete;
 
         public SavedSearchViewHolder(@NonNull View itemView) {
             super(itemView);
             tvSearchTerm = itemView.findViewById(R.id.tvSearchTerm);
+            tvNewResults = itemView.findViewById(R.id.tvNewResults);
             tvFilters = itemView.findViewById(R.id.tvFilters);
             btnExecute = itemView.findViewById(R.id.btnExecute);
             btnDelete = itemView.findViewById(R.id.btnDelete);

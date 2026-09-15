@@ -253,23 +253,16 @@ app.post('/api/auth/otp/verify', async (req, res) => {
 // 2. ENDPOINTS DE PUBLICACIONES (HOME)
 // ==========================================
 
-app.get('/api/publications', requireAuth, async (req, res) => {
-  const {
-    search,
-    category,
-    condition,
-    minPrice,
-    maxPrice,
-    zone,
-    nearZone,
-    sortBy,
-    page = 1,
-    limit = 10
-  } = req.query;
-
-  // El WHERE se arma una sola vez y se reutiliza para el COUNT del total,
-  // asi el cliente sabe cuando dejar de pedir paginas. Las columnas van
-  // calificadas con "p." porque el JOIN con users trae otra columna "zone".
+/**
+ * Arma el WHERE de las publicaciones activas a partir de los filtros del Home.
+ *
+ * Lo comparten el listado y el contador de novedades de las busquedas
+ * guardadas (punto 11): "coincide con la busqueda" tiene que significar lo
+ * mismo en los dos lados, y con el filtro copiado en dos lugares tarde o
+ * temprano dejarian de coincidir. Las columnas van calificadas con "p."
+ * porque el listado hace JOIN con users, que trae otra columna "zone".
+ */
+function filtrosDePublicaciones({ search, category, condition, zone, nearZone, minPrice, maxPrice }) {
   let whereClause = " WHERE p.status = 'activa'";
   const filterParams = [];
 
@@ -309,6 +302,29 @@ app.get('/api/publications', requireAuth, async (req, res) => {
     whereClause += ' AND p.price <= ?';
     filterParams.push(Number(maxPrice));
   }
+
+  return { whereClause, filterParams };
+}
+
+app.get('/api/publications', requireAuth, async (req, res) => {
+  const {
+    search,
+    category,
+    condition,
+    minPrice,
+    maxPrice,
+    zone,
+    nearZone,
+    sortBy,
+    page = 1,
+    limit = 10
+  } = req.query;
+
+  // El WHERE se arma una sola vez y se reutiliza para el COUNT del total,
+  // asi el cliente sabe cuando dejar de pedir paginas.
+  const { whereClause, filterParams } = filtrosDePublicaciones({
+    search, category, condition, zone, nearZone, minPrice, maxPrice
+  });
 
   const sortMap = {
     'price_asc': 'p.price ASC',
@@ -932,9 +948,10 @@ app.get('/api/saved-searches', requireAuth, async (req, res) => {
       [userId]
     );
 
-    const data = rows.map((r) => {
+    const data = [];
+    for (const r of rows) {
       const f = JSON.parse(r.filters || '{}');
-      return {
+      data.push({
         id: r.id,
         userId: r.userId,
         searchTerm: r.searchTerm,
@@ -945,12 +962,62 @@ app.get('/api/saved-searches', requireAuth, async (req, res) => {
         zone: f.zone || null,
         sort: f.sort || 'recent',
         createdAt: r.savedAt,
-      };
-    });
+        lastSeenAt: r.lastSeenAt || r.savedAt,
+        newCount: await contarNovedades(r, f, userId),
+      });
+    }
 
     res.json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /api/saved-searches:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * Punto 11: cuantas publicaciones que coinciden con la busqueda aparecieron
+ * desde la ultima vez que la persona la ejecuto (o desde que la guardo).
+ *
+ * Usa el mismo WHERE que el listado del Home, asi que "coincide" significa lo
+ * mismo que veria al ejecutarla. No cuenta las publicaciones propias: que tu
+ * propio articulo coincida con tu busqueda no es una novedad para vos.
+ */
+async function contarNovedades(busqueda, filtros, userId) {
+  const { whereClause, filterParams } = filtrosDePublicaciones({
+    search: busqueda.searchTerm,
+    category: filtros.category,
+    condition: filtros.condition,
+    zone: filtros.zone,
+    minPrice: filtros.minPrice,
+    maxPrice: filtros.maxPrice,
+  });
+  // created_at y la marca estan los dos en el formato de SQLite
+  // ("YYYY-MM-DD HH:MM:SS", UTC), asi que se comparan como texto sin convertir.
+  const row = await db.get(
+    `SELECT COUNT(*) AS total FROM publications p${whereClause}
+        AND p.created_at > ?
+        AND (p.user_id IS NULL OR p.user_id != ?)`,
+    [...filterParams, busqueda.lastSeenAt || busqueda.savedAt, userId]
+  );
+  return row ? row.total : 0;
+}
+
+// Marca la busqueda como vista: las novedades se vuelven a contar desde ahora.
+// La app lo llama al ejecutar la busqueda, que es cuando la persona ve el resultado.
+app.patch('/api/saved-searches/:id/seen', requireAuth, async (req, res) => {
+  try {
+    // datetime('now') y no la hora de JS: tiene que quedar en el mismo formato
+    // que publications.created_at para que la comparacion de arriba funcione.
+    const { changes } = await db.run(
+      "UPDATE saved_searches SET lastSeenAt = datetime('now') WHERE id = ? AND userId = ?",
+      [req.params.id, req.userId]
+    );
+    if (changes === 0) {
+      return res.status(404).json({ success: false, message: 'Busqueda no encontrada' });
+    }
+    res.json({ success: true, message: 'Busqueda marcada como vista' });
+  } catch (error) {
+    console.error('Error en PATCH /api/saved-searches/:id/seen:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

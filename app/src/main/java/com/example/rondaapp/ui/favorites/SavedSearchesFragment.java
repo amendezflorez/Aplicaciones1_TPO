@@ -141,6 +141,18 @@ public class SavedSearchesFragment extends Fragment {
         if (search.getMaxPrice() != null) result.putDouble("maxPrice", search.getMaxPrice());
         result.putString("sort", search.getSort() != null ? search.getSort() : "recent");
 
+        // Ejecutarla es ver sus resultados: las novedades se vuelven a contar desde
+        // ahora. Si el pedido falla el indicador sigue, que es preferible a
+        // borrarlo sin que el backend lo sepa. La respuesta llega cuando este
+        // fragment ya se fue, por eso los callbacks no tocan vistas.
+        apiService.markSavedSearchSeen(search.getId()).enqueue(new Callback<SimpleResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<SimpleResponse> call, @NonNull Response<SimpleResponse> response) { }
+
+            @Override
+            public void onFailure(@NonNull Call<SimpleResponse> call, @NonNull Throwable t) { }
+        });
+
         getParentFragmentManager().setFragmentResult("execute_saved_search", result);
         Navigation.findNavController(requireView()).popBackStack(R.id.homeFragment, false);
     }
