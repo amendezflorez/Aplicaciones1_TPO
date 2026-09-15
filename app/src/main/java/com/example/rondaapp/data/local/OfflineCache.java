@@ -8,6 +8,7 @@ import com.example.rondaapp.data.local.db.CacheDao;
 import com.example.rondaapp.data.local.db.CachedPhoto;
 import com.example.rondaapp.data.local.db.CachedPublication;
 import com.example.rondaapp.data.model.Publication;
+import com.example.rondaapp.data.model.Seller;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -116,18 +117,21 @@ public class OfflineCache {
     // ---------- Publicaciones vistas en detalle ----------
 
     /**
-     * Guarda una publicación que la persona abrió, con sus fotos, para poder
-     * volver a verla sin conexión.
+     * Guarda una publicación que la persona abrió, con sus fotos y su vendedor,
+     * para poder volver a verla sin conexión. Es lo que el TP pide conservar:
+     * "detalle, fotos, precio y datos del vendedor".
      *
-     * Pensado para que la pantalla de detalle (punto 4) lo llame apenas termina
-     * de cargar.
+     * La pantalla de detalle (punto 4) lo llama apenas termina de cargar.
      *
+     * @param vendedor    tal como vino en GET publications/{id}; null si la
+     *                    publicación no tiene dueño
      * @param fotosBase64 data URI tal como los devuelve GET publications/{id}/photos
      */
-    public void guardarVista(Publication publication, List<String> fotosBase64) {
+    public void guardarVista(Publication publication, Seller vendedor, List<String> fotosBase64) {
         if (publication == null) return;
 
         CachedPublication entidad = CachedPublication.desde(publication);
+        entidad.guardarVendedor(vendedor);
         List<CachedPhoto> fotos = new ArrayList<>();
         if (fotosBase64 != null) {
             for (int i = 0; i < fotosBase64.size(); i++) {
@@ -141,6 +145,17 @@ public class OfflineCache {
         executor.execute(() -> {
             CachedPublication fila = dao.obtener(publicationId);
             responder(callback, (fila != null && fila.vistaEn > 0) ? fila.aPublication() : null);
+        });
+    }
+
+    /**
+     * Vendedor guardado al abrir el detalle, o null si no hay: en ese caso la
+     * pantalla no debe mostrar reputación, porque no la conoce.
+     */
+    public void leerVendedor(int publicationId, Callback<Seller> callback) {
+        executor.execute(() -> {
+            CachedPublication fila = dao.obtener(publicationId);
+            responder(callback, fila != null ? fila.aSeller() : null);
         });
     }
 

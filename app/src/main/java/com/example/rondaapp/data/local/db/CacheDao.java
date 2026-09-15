@@ -5,6 +5,7 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Transaction;
+import androidx.room.Upsert;
 
 import java.util.List;
 
@@ -54,9 +55,9 @@ public interface CacheDao {
     int contarListado();
 
     /**
-     * Reemplaza el listado cacheado conservando la marca de "vista": una
-     * publicación que se abrió en detalle no debe perder sus fotos porque salió
-     * de la primera página del Home.
+     * Reemplaza el listado cacheado conservando lo que se guardó al abrir el
+     * detalle: la marca de "vista" y los datos del vendedor, que el listado no
+     * trae. Las fotos se conservan porque {@link #guardar} no borra la fila.
      */
     @Transaction
     default void reemplazarListado(List<CachedPublication> nuevas, long guardadoEn) {
@@ -64,17 +65,18 @@ public interface CacheDao {
         for (CachedPublication publicacion : nuevas) {
             publicacion.enListado = true;
             publicacion.listadoGuardadoEn = guardadoEn;
-            publicacion.vistaEn = vistaEnDe(publicacion.id);
+            CachedPublication anterior = obtener(publicacion.id);
+            if (anterior != null) {
+                publicacion.vistaEn = anterior.vistaEn;
+                publicacion.copiarVendedorDe(anterior);
+            }
         }
-        insertar(nuevas);
+        guardar(nuevas);
         borrarNiListadasNiVistas();
     }
 
     @Query("UPDATE cached_publications SET enListado = 0")
     void desmarcarListado();
-
-    @Query("SELECT IFNULL((SELECT vistaEn FROM cached_publications WHERE id = :id), 0)")
-    long vistaEnDe(int id);
 
     /** Las que ya no están en el listado y tampoco se vieron no tienen por qué ocupar lugar. */
     @Query("DELETE FROM cached_publications WHERE enListado = 0 AND vistaEn = 0")
@@ -82,11 +84,17 @@ public interface CacheDao {
 
     // ---------- Publicaciones vistas en detalle ----------
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insertar(List<CachedPublication> publicaciones);
+    /**
+     * Upsert y no {@code REPLACE}: en SQLite, REPLACE borra la fila vieja antes
+     * de insertar la nueva, y ese borrado dispara el ON DELETE CASCADE de
+     * {@link CachedPhoto}. Así, cada recarga del Home se llevaba las fotos de
+     * las publicaciones que ya se habían abierto en detalle.
+     */
+    @Upsert
+    void guardar(List<CachedPublication> publicaciones);
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insertar(CachedPublication publicacion);
+    @Upsert
+    void guardar(CachedPublication publicacion);
 
     @Query("SELECT * FROM cached_publications WHERE id = :id")
     CachedPublication obtener(int id);
@@ -113,7 +121,7 @@ public interface CacheDao {
             publicacion.listadoGuardadoEn = existente.listadoGuardadoEn;
         }
         publicacion.vistaEn = System.currentTimeMillis();
-        insertar(publicacion);
+        guardar(publicacion);
 
         borrarFotosDe(publicacion.id);
         if (fotos != null && !fotos.isEmpty()) {
