@@ -5,10 +5,11 @@ import java.util.List;
 /**
  * Body de POST publications. Las fotos viajan como data URI en base64
  * (punto 5), por eso conviene no reutilizar este body para listados.
+ *
+ * No lleva el id del autor: el backend lo saca del token.
  */
 public class CreatePublicationBody {
 
-    private final String userId;
     private final String title;
     private final String description;
     private final double price;
@@ -17,9 +18,8 @@ public class CreatePublicationBody {
     private final String zone;
     private final List<String> photos;
 
-    public CreatePublicationBody(String userId, String title, String description, double price,
+    public CreatePublicationBody(String title, String description, double price,
                                  String condition, String category, String zone, List<String> photos) {
-        this.userId = userId;
         this.title = title;
         this.description = description;
         this.price = price;

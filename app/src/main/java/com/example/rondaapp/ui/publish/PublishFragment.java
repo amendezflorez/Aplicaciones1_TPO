@@ -363,8 +363,7 @@ public class PublishFragment extends Fragment {
     private void publicar() {
         leerFormularioEnBorrador();
 
-        String userId = sessionManager.getUserId();
-        if (userId == null) {
+        if (sessionManager.getUserId() == null) {
             Toast.makeText(requireContext(), R.string.publish_error_generic, Toast.LENGTH_SHORT).show();
             return;
         }
@@ -386,7 +385,7 @@ public class PublishFragment extends Fragment {
         }
 
         CreatePublicationBody body = new CreatePublicationBody(
-                userId, draft.titulo, draft.descripcion, precio,
+                draft.titulo, draft.descripcion, precio,
                 draft.condicion, draft.categoria, draft.zona, fotosBase64);
 
         apiService.createPublication(body).enqueue(new Callback<Publication>() {

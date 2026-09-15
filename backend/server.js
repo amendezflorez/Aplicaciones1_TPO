@@ -357,11 +357,12 @@ const MAX_FOTOS = 5;
 
 // Crear una publicacion, con sus fotos.
 app.post('/api/publications', requireAuth, async (req, res) => {
-  const { userId, title, description, price, condition, category, zone, photos } = req.body;
+  const { title, description, price, condition, category, zone, photos } = req.body;
 
-  if (!userId) {
-    return res.status(400).json({ success: false, message: 'Falta el usuario que publica' });
-  }
+  // El autor sale del token. Tomarlo del body dejaba publicar a nombre de otro
+  // con solo mandar su id, que es peor que leer datos ajenos: falsifica autoria.
+  const userId = req.userId;
+
   if (!title || !title.trim()) {
     return res.status(400).json({ success: false, message: 'El título es obligatorio' });
   }
@@ -378,9 +379,11 @@ app.post('/api/publications', requireAuth, async (req, res) => {
   }
 
   try {
+    // El id ya no lo elige el cliente, asi que si el usuario no esta es que el
+    // token sobrevivio a su dueno: eso es una sesion muerta, no un 404.
     const user = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+      return res.status(401).json({ success: false, message: 'La sesion ya no es valida' });
     }
 
     const insert = await db.run(
