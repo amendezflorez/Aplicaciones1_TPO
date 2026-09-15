@@ -439,6 +439,11 @@ app.patch('/api/publications/:id/status', requireAuth, async (req, res) => {
     if (!publicacion) {
       return res.status(404).json({ success: false, message: 'Publicación no encontrada' });
     }
+    // Pausar o marcar como vendida es gestion de la propia publicacion, igual
+    // que ver las ofertas: solo el vendedor.
+    if (publicacion.user_id !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Solo el vendedor cambia el estado de la publicacion' });
+    }
 
     await db.run('UPDATE publications SET status = ? WHERE id = ?', [status, req.params.id]);
     res.json({ ...publicacion, status });
@@ -691,6 +696,12 @@ app.get('/api/users/:id', requireAuth, async (req, res) => {
 app.put('/api/users/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { name, email, phone, zone } = req.body;
+
+  // El token dice quien llama, pero no que pueda tocar este perfil: sin esta
+  // comparacion cualquier usuario logueado le reescribe los datos a otro.
+  if (id !== req.userId) {
+    return res.status(403).json({ success: false, message: 'Solo se puede editar el perfil propio' });
+  }
 
   if (!name || !name.trim()) {
     return res.status(400).json({ success: false, message: 'El nombre no puede quedar vacío' });
