@@ -40,6 +40,14 @@
         <action
             android:id="@+id/action_home_to_detail"
             app:destination="@id/publicationDetailFragment" />
+
+        <action
+            android:id="@+id/action_home_to_favorites"
+            app:destination="@id/favoritesFragment" />
+
+        <action
+            android:id="@+id/action_home_to_savedSearches"
+            app:destination="@id/savedSearchesFragment" />
     </fragment>
 
     <!-- Punto 5: carga guiada para publicar un artículo -->

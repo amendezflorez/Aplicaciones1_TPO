@@ -750,8 +750,185 @@ app.post('/api/users/:id/ratings', requireAuth, async (req, res) => {
   }
 });
 
+// ==========================================
+// 1. ENDPOINTS DE FAVORITOS - PUNTO 11
+// ==========================================
+
+// --- Endpoints de Favoritos (Punto 11) ---
+app.post('/api/favorites', requireAuth, async (req, res) => {
+  const { publicationId, savedPrice } = req.body;
+  const userId = req.userId;
+
+  if (!publicationId || savedPrice === undefined) {
+    return res.status(400).json({ message: 'Faltan publicationId o savedPrice' });
+  }
+
+  try {
+    const result = await db.run(
+      'INSERT INTO favorites (userId, publicationId, savedPrice) VALUES (?, ?, ?)',
+      [userId, publicationId, savedPrice]
+    );
+
+    const fav = await db.get(
+      `SELECT f.id, f.userId, f.publicationId, f.savedPrice, f.savedAt,
+              p.id as p_id, p.title, p.description, p.price, p.condition,
+              p.category, p.zone
+       FROM favorites f JOIN publications p ON f.publicationId = p.id
+       WHERE f.id = ?`,
+      [result.lastID]
+    );
+
+    res.status(201).json({
+      id: fav.id,
+      userId: fav.userId,
+      publicationId: fav.publicationId,
+      savedPrice: fav.savedPrice,
+      savedAt: fav.savedAt,
+      publication: {
+        id: fav.p_id,
+        title: fav.title,
+        description: fav.description,
+        price: fav.price,
+        condition: fav.condition,
+        category: fav.category,
+        zone: fav.zone,
+      },
+    });
+  } catch (error) {
+    if (error.code === 'SQLITE_CONSTRAINT') {
+      return res.status(409).json({ message: 'Esta publicación ya está en tus favoritos' });
+    }
+    console.error('Error en POST /api/favorites:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/favorites', requireAuth, async (req, res) => {
+  const userId = req.query.userId || req.userId;
+  try {
+    const rows = await db.all(
+      `SELECT f.id, f.userId, f.publicationId, f.savedPrice, f.savedAt,
+              p.id as p_id, p.title, p.description, p.price, p.condition,
+              p.category, p.zone
+       FROM favorites f JOIN publications p ON f.publicationId = p.id
+       WHERE f.userId = ?
+       ORDER BY f.savedAt DESC`,
+      [userId]
+    );
+
+    const data = rows.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      publicationId: r.publicationId,
+      savedPrice: r.savedPrice,
+      savedAt: r.savedAt,
+      publication: {
+        id: r.p_id,
+        title: r.title,
+        description: r.description,
+        price: r.price,
+        condition: r.condition,
+        category: r.category,
+        zone: r.zone,
+      },
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error en GET /api/favorites:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/favorites/:id', requireAuth, async (req, res) => {
+  try {
+    await db.run('DELETE FROM favorites WHERE id = ? AND userId = ?', [req.params.id, req.userId]);
+    res.json({ success: true, message: 'Favorito eliminado' });
+  } catch (error) {
+    console.error('Error en DELETE /api/favorites/:id:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// --- Endpoints de Búsquedas Guardadas (Punto 11) ---
+app.post('/api/saved-searches', requireAuth, async (req, res) => {
+  const { searchTerm, category, minPrice, maxPrice, condition, zone, sort } = req.body;
+  const userId = req.userId;
+
+  if (!searchTerm) {
+    return res.status(400).json({ message: 'Falta searchTerm' });
+  }
+
+  const filters = JSON.stringify({ category, minPrice, maxPrice, condition, zone, sort });
+
+  try {
+    const result = await db.run(
+      'INSERT INTO saved_searches (userId, searchTerm, filters) VALUES (?, ?, ?)',
+      [userId, searchTerm, filters]
+    );
+
+    res.status(201).json({
+      id: result.lastID,
+      userId,
+      searchTerm,
+      category: category || null,
+      minPrice: minPrice != null ? minPrice : null,
+      maxPrice: maxPrice != null ? maxPrice : null,
+      condition: condition || null,
+      zone: zone || null,
+      sort: sort || 'recent',
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error en POST /api/saved-searches:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/saved-searches', requireAuth, async (req, res) => {
+  const userId = req.query.userId || req.userId;
+  try {
+    const rows = await db.all(
+      'SELECT * FROM saved_searches WHERE userId = ? ORDER BY savedAt DESC',
+      [userId]
+    );
+
+    const data = rows.map((r) => {
+      const f = JSON.parse(r.filters || '{}');
+      return {
+        id: r.id,
+        userId: r.userId,
+        searchTerm: r.searchTerm,
+        category: f.category || null,
+        minPrice: f.minPrice != null ? f.minPrice : null,
+        maxPrice: f.maxPrice != null ? f.maxPrice : null,
+        condition: f.condition || null,
+        zone: f.zone || null,
+        sort: f.sort || 'recent',
+        createdAt: r.savedAt,
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error en GET /api/saved-searches:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/saved-searches/:id', requireAuth, async (req, res) => {
+  try {
+    await db.run('DELETE FROM saved_searches WHERE id = ? AND userId = ?', [req.params.id, req.userId]);
+    res.json({ success: true, message: 'Búsqueda eliminada' });
+  } catch (error) {
+    console.error('Error en DELETE /api/saved-searches/:id:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Se espera a que el esquema termine de migrar antes de atender pedidos.
 db.ready
+
   .then(() => {
     app.listen(PORT, () => {
       console.log(`===================================================`);

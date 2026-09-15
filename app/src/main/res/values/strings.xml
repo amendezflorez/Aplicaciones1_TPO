@@ -55,6 +55,11 @@
     <string name="delete_search">Eliminar búsqueda</string>
     <string name="error_session_expired">Sesión expirada</string>
     <string name="publication_seller">Vendedor: %1$s</string>
+    <string name="detail_favorite">☆ Favorito</string>
+    <string name="price_dropped">▼ Bajó de $%.2f a $%.2f</string>
+    <string name="price_increased">▲ Subió de $%.2f a $%.2f</string>
+    <string name="home_favorites">Mis favoritos</string>
+    <string name="home_saved_searches">Búsquedas guardadas</string>
 
     <!-- Perfil y reputación -->
     <string name="profile_my_title">Mis datos</string>

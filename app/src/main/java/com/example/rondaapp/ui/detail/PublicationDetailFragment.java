@@ -37,6 +37,7 @@ import com.example.rondaapp.data.model.QuestionBody;
 import com.example.rondaapp.data.model.QuestionsResponse;
 import com.example.rondaapp.data.model.Reputation;
 import com.example.rondaapp.data.model.Seller;
+import com.example.rondaapp.data.model.Favorite;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
 import com.example.rondaapp.ui.profile.ProfileFormatter;
@@ -89,7 +90,7 @@ public class PublicationDetailFragment extends Fragment {
     private TextView tvSellerName, tvSellerReputation, tvSellerOperations, tvSellerSeniority;
     private TextView tvQuestionsTitle, tvNoQuestions, tvOffersTitle, tvOffers;
     private LinearLayout panelInterested, panelSeller;
-    private Button btnSellerProfile, btnAskQuestion, btnMakeOffer, btnTogglePause, btnMarkSold;
+    private Button btnSellerProfile, btnAskQuestion, btnMakeOffer, btnTogglePause, btnMarkSold, btnFavoriteDetail;
     private RecyclerView rvGallery;
 
     @Override
@@ -158,6 +159,7 @@ public class PublicationDetailFragment extends Fragment {
         btnMakeOffer = view.findViewById(R.id.btnMakeOffer);
         btnTogglePause = view.findViewById(R.id.btnTogglePause);
         btnMarkSold = view.findViewById(R.id.btnMarkSold);
+        btnFavoriteDetail = view.findViewById(R.id.btnFavoriteDetail);
 
         tvQuestionsTitle = view.findViewById(R.id.tvQuestionsTitle);
         tvNoQuestions = view.findViewById(R.id.tvNoQuestions);
@@ -215,6 +217,38 @@ public class PublicationDetailFragment extends Fragment {
         });
 
         btnMarkSold.setOnClickListener(v -> cambiarEstado(PublicationStatusBody.VENDIDA));
+
+        btnFavoriteDetail.setOnClickListener(v -> {
+            if (!exigirConexion()) return;
+            if (publicacion == null) return;
+
+            String userId = sessionManager.getUserId();
+            if (userId == null) {
+                Toast.makeText(requireContext(), "Sesión expirada", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Favorite favorite = new Favorite();
+            favorite.setUserId(userId);
+            favorite.setPublicationId(publicacion.getId());
+            favorite.setSavedPrice(publicacion.getPrice());
+
+            apiService.addFavorite(favorite).enqueue(new Callback<Favorite>() {
+                @Override
+                public void onResponse(@NonNull Call<Favorite> call, @NonNull Response<Favorite> response) {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(),
+                            response.isSuccessful() ? "¡Agregado a favoritos!" : "Error al guardar",
+                            Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onFailure(@NonNull Call<Favorite> call, @NonNull Throwable t) {
+                    if (!isAdded()) return;
+                    Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
     }
 
     // ==========================================
