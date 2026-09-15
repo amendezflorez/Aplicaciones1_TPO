@@ -804,7 +804,9 @@ app.post('/api/favorites', requireAuth, async (req, res) => {
 });
 
 app.get('/api/favorites', requireAuth, async (req, res) => {
-  const userId = req.query.userId || req.userId;
+  // El duenio de la lista sale del token, nunca del query: aceptar ?userId=
+  // dejaba que cualquier usuario logueado leyera la lista de otro.
+  const userId = req.userId;
   try {
     const rows = await db.all(
       `SELECT f.id, f.userId, f.publicationId, f.savedPrice, f.savedAt,
@@ -886,7 +888,9 @@ app.post('/api/saved-searches', requireAuth, async (req, res) => {
 });
 
 app.get('/api/saved-searches', requireAuth, async (req, res) => {
-  const userId = req.query.userId || req.userId;
+  // El duenio de la lista sale del token, nunca del query: aceptar ?userId=
+  // dejaba que cualquier usuario logueado leyera la lista de otro.
+  const userId = req.userId;
   try {
     const rows = await db.all(
       'SELECT * FROM saved_searches WHERE userId = ? ORDER BY savedAt DESC',

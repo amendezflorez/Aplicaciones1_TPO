@@ -128,7 +128,8 @@ public interface ApiService {
     Call<Favorite> addFavorite(@Body Favorite favorite);
 
     @GET("favorites")
-    Call<FavoriteResponse> getFavorites(@Query("userId") String userId);
+    // Sin parametro: el backend toma el usuario del token.
+    Call<FavoriteResponse> getFavorites();
 
     @DELETE("favorites/{id}")
     Call<SimpleResponse> deleteFavorite(@Path("id") int favoriteId);
@@ -137,7 +138,8 @@ public interface ApiService {
     Call<SavedSearch> addSavedSearch(@Body SavedSearch savedSearch);
 
     @GET("saved-searches")
-    Call<SavedSearchResponse> getSavedSearches(@Query("userId") String userId);
+    // Sin parametro: el backend toma el usuario del token.
+    Call<SavedSearchResponse> getSavedSearches();
 
     @DELETE("saved-searches/{id}")
     Call<SimpleResponse> deleteSavedSearch(@Path("id") int searchId);

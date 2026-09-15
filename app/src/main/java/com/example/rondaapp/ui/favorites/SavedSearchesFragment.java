@@ -77,7 +77,7 @@ public class SavedSearchesFragment extends Fragment {
             return;
         }
 
-        apiService.getSavedSearches(userId).enqueue(new Callback<SavedSearchResponse>() {
+        apiService.getSavedSearches().enqueue(new Callback<SavedSearchResponse>() {
             @Override
             public void onResponse(@NonNull Call<SavedSearchResponse> call, @NonNull Response<SavedSearchResponse> response) {
                 if (!isAdded()) return;

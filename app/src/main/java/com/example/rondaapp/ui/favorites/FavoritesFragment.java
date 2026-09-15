@@ -75,7 +75,7 @@ public class FavoritesFragment extends Fragment {
             return;
         }
 
-        apiService.getFavorites(userId).enqueue(new Callback<FavoriteResponse>() {
+        apiService.getFavorites().enqueue(new Callback<FavoriteResponse>() {
             @Override
             public void onResponse(@NonNull Call<FavoriteResponse> call, @NonNull Response<FavoriteResponse> response) {
                 if (!isAdded()) return;
