@@ -61,6 +61,9 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.androidx.cardview)
 
+    // Biometría
+    implementation(libs.biometric)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

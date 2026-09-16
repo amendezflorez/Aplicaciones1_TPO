@@ -13,8 +13,12 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
+import androidx.navigation.NavController;
 
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.AuthResponse;
@@ -57,7 +61,7 @@ public class LoginFragment extends Fragment {
             Bundle args = new Bundle();
             String name = sessionManager.getName();
             args.putString("username", name != null ? name : "");
-            Navigation.findNavController(view).navigate(R.id.action_login_to_home, args);
+            requestBiometricAuth(view, args);
             return;
         }
 
@@ -115,5 +119,55 @@ public class LoginFragment extends Fragment {
 
         tvLoginWithOtp.setOnClickListener(v ->
                 Navigation.findNavController(view).navigate(R.id.action_login_to_emailAuth));
+    }
+
+    /**
+     * Gate de UI: pide biometría/PIN antes de dejar entrar a un usuario con sesión guardada.
+     * Si el dispositivo no tiene sensor ni credencial enrolada, no bloquea el acceso.
+     */
+    private void requestBiometricAuth(@NonNull View view, @NonNull Bundle args) {
+        int allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG
+                | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+
+        BiometricManager biometricManager = BiometricManager.from(requireContext());
+        int canAuthenticate = biometricManager.canAuthenticate(allowedAuthenticators);
+
+        NavController navController = Navigation.findNavController(view);
+
+        if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+            navController.navigate(R.id.action_login_to_home, args);
+            return;
+        }
+
+        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle(getString(R.string.biometric_prompt_title))
+                .setSubtitle(getString(R.string.biometric_prompt_subtitle))
+                .setDescription(getString(R.string.biometric_prompt_description))
+                .setAllowedAuthenticators(allowedAuthenticators)
+                .build();
+
+        BiometricPrompt biometricPrompt = new BiometricPrompt(this,
+                ContextCompat.getMainExecutor(requireContext()),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                        super.onAuthenticationSucceeded(result);
+                        navController.navigate(R.id.action_login_to_home, args);
+                    }
+
+                    @Override
+                    public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                        super.onAuthenticationError(errorCode, errString);
+                        Log.e(TAG, "onAuthenticationError: " + errorCode + " " + errString);
+                    }
+
+                    @Override
+                    public void onAuthenticationFailed() {
+                        super.onAuthenticationFailed();
+                        Log.e(TAG, "onAuthenticationFailed");
+                    }
+                });
+
+        biometricPrompt.authenticate(promptInfo);
     }
 }

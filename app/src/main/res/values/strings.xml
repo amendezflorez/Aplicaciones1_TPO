@@ -11,6 +11,11 @@
     <string name="login_error_empty_fields">Completá usuario y contraseña</string>
     <string name="login_error_generic">No pudimos iniciar sesión. Intentá de nuevo.</string>
 
+    <!-- Biometría -->
+    <string name="biometric_prompt_title">Verificá tu identidad</string>
+    <string name="biometric_prompt_subtitle">Usá tu huella, rostro o PIN para continuar</string>
+    <string name="biometric_prompt_description">Necesitamos confirmar que sos vos antes de mostrar tu cuenta</string>
+
     <!-- Email / OTP request -->
     <string name="email_auth_title">Ingresar con email</string>
     <string name="email_auth_subtitle">Te enviamos un código de 6 dígitos para verificar tu cuenta</string>
