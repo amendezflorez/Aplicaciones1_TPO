@@ -17,6 +17,18 @@ public class Seller {
 
     private Reputation reputation;
 
+    /** Gson lo usa al deserializar la respuesta de la API. */
+    public Seller() {}
+
+    /** Para reconstruirlo desde el caché local (punto 6). */
+    public Seller(String id, String name, String zone, String createdAt, Reputation reputation) {
+        this.id = id;
+        this.name = name;
+        this.zone = zone;
+        this.createdAt = createdAt;
+        this.reputation = reputation;
+    }
+
     public String getId() { return id; }
     public String getName() { return name; }
     public String getZone() { return zone; }
