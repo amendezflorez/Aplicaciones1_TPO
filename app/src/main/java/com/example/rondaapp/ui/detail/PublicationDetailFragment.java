@@ -79,6 +79,9 @@ public class PublicationDetailFragment extends Fragment {
 
     private int publicationId;
     private Publication publicacion;
+    /** El vendedor que se está mostrando; se cachea junto con la publicación. */
+    @Nullable
+    private Seller vendedor;
     private boolean esPropia;
 
     private final PhotoGalleryAdapter galleryAdapter = new PhotoGalleryAdapter();
@@ -317,7 +320,7 @@ public class PublicationDetailFragment extends Fragment {
 
                 // Punto 6: recién acá se tiene la publicación completa con sus fotos,
                 // que es lo que hay que poder ver después sin conexión.
-                if (publicacion != null) offlineCache.guardarVista(publicacion, fotos);
+                if (publicacion != null) offlineCache.guardarVista(publicacion, vendedor, fotos);
             }
 
             @Override
@@ -376,7 +379,10 @@ public class PublicationDetailFragment extends Fragment {
             }
 
             tvOfflineBanner.setVisibility(View.VISIBLE);
-            mostrar(cacheada, null);
+            offlineCache.leerVendedor(publicationId, vendedorCacheado -> {
+                if (!isAdded() || getView() == null) return;
+                mostrar(cacheada, vendedorCacheado);
+            });
             offlineCache.leerFotos(publicationId, fotos -> {
                 if (!isAdded() || getView() == null) return;
                 mostrarFotos(fotos);
@@ -390,6 +396,7 @@ public class PublicationDetailFragment extends Fragment {
 
     private void mostrar(Publication pub, @Nullable Seller vendedor) {
         publicacion = pub;
+        this.vendedor = vendedor;
         contentDetail.setVisibility(View.VISIBLE);
 
         tvTitle.setText(pub.getTitle());
@@ -416,9 +423,17 @@ public class PublicationDetailFragment extends Fragment {
                 : pub.getSellerName();
         tvSellerName.setText(nombre != null ? nombre : "");
 
-        Reputation reputacion = vendedor != null ? vendedor.getReputation() : null;
-        tvSellerReputation.setText(ProfileFormatter.promedio(requireContext(), reputacion));
-        tvSellerOperations.setText(ProfileFormatter.operaciones(requireContext(), reputacion));
+        // Sin datos del vendedor (una vista cacheada antes de que se guardara el
+        // vendedor, o una publicación sin dueño) la reputación se oculta: mostrar
+        // "sin calificaciones" sería afirmar algo que no se sabe.
+        boolean conReputacion = vendedor != null && vendedor.getReputation() != null;
+        tvSellerReputation.setVisibility(conReputacion ? View.VISIBLE : View.GONE);
+        tvSellerOperations.setVisibility(conReputacion ? View.VISIBLE : View.GONE);
+        if (conReputacion) {
+            Reputation reputacion = vendedor.getReputation();
+            tvSellerReputation.setText(ProfileFormatter.promedio(requireContext(), reputacion));
+            tvSellerOperations.setText(ProfileFormatter.operaciones(requireContext(), reputacion));
+        }
 
         String antiguedad = vendedor != null
                 ? ProfileFormatter.antiguedad(requireContext(), vendedor.getCreatedAt())

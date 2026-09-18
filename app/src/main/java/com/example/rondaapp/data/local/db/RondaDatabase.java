@@ -12,7 +12,9 @@ import androidx.room.RoomDatabase;
  */
 @Database(
         entities = {CachedPublication.class, CachedPhoto.class},
-        version = 1,
+        // v2: CachedPublication guarda también el vendedor. Al subir la versión el
+        // caché viejo se descarta (fallbackToDestructiveMigration) y se rearma solo.
+        version = 2,
         exportSchema = false)
 public abstract class RondaDatabase extends RoomDatabase {
 

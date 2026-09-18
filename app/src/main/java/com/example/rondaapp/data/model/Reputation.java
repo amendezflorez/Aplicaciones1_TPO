@@ -11,6 +11,17 @@ public class Reputation {
     private int salesCount;
     private int purchasesCount;
 
+    /** Gson lo usa al deserializar la respuesta de la API. */
+    public Reputation() {}
+
+    /** Para reconstruirla desde el caché local (punto 6). */
+    public Reputation(double average, int totalRatings, int salesCount, int purchasesCount) {
+        this.average = average;
+        this.totalRatings = totalRatings;
+        this.salesCount = salesCount;
+        this.purchasesCount = purchasesCount;
+    }
+
     /** Promedio de estrellas, ya redondeado a un decimal por el backend. */
     public double getAverage() { return average; }
 
