@@ -583,7 +583,7 @@ app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
     }
 
     const rows = await db.all(
-      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
          FROM offers o
          LEFT JOIN users u ON u.id = o.user_id
         WHERE o.publication_id = ?
@@ -593,6 +593,66 @@ app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
     res.json({ data: rows, total: rows.length });
   } catch (error) {
     console.error('Error en GET /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Coordinación de la Entrega: consulta de la oferta realizada por el usuario actual en la publicación
+app.get('/api/publications/:id/my-offer', requireAuth, async (req, res) => {
+  try {
+    const offer = await db.get(
+      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o
+         LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.publication_id = ? AND o.user_id = ?
+        ORDER BY o.created_at DESC
+        LIMIT 1`,
+      [req.params.id, req.userId]
+    );
+    res.json(offer || null);
+  } catch (error) {
+    console.error('Error en GET /api/publications/:id/my-offer', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Coordinación de la Entrega: el vendedor acepta una oferta y confirma el punto de entrega
+app.patch('/api/offers/:id/accept', requireAuth, async (req, res) => {
+  try {
+    const offer = await db.get(
+      `SELECT o.*, p.user_id AS seller_id, p.zone AS publication_zone, p.delivery_point AS publication_delivery_point
+         FROM offers o
+         JOIN publications p ON p.id = o.publication_id
+        WHERE o.id = ?`,
+      [req.params.id]
+    );
+
+    if (!offer) {
+      return res.status(404).json({ success: false, message: 'Oferta no encontrada' });
+    }
+    if (offer.seller_id !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Solo el vendedor puede aceptar la oferta' });
+    }
+
+    const deliveryPoint = (req.body && req.body.delivery_point && req.body.delivery_point.trim())
+      ? req.body.delivery_point.trim()
+      : (offer.publication_delivery_point || offer.publication_zone || 'Punto a convenir');
+
+    await db.run(
+      "UPDATE offers SET status = 'aceptada', delivery_point = ? WHERE id = ?",
+      [deliveryPoint, offer.id]
+    );
+
+    const updated = await db.get(
+      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o
+         LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.id = ?`,
+      [offer.id]
+    );
+    res.json(updated);
+  } catch (error) {
+    console.error('Error en PATCH /api/offers/:id/accept', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -620,7 +680,7 @@ app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
       [publication.id, req.userId, monto]
     );
     const creada = await db.get(
-      `SELECT o.id, o.amount, o.status, o.created_at, o.user_id, u.name AS user_name
+      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
          FROM offers o LEFT JOIN users u ON u.id = o.user_id
         WHERE o.id = ?`,
       [lastID]
