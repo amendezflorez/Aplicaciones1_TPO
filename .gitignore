@@ -20,7 +20,7 @@ captures/
 *.apk
 output-metadata.json
 
-# IntelliJ / Android Studio
+# IntelliJ / Android Studio / VS Code
 *.iml
 .idea/
 /.idea/caches
@@ -32,6 +32,7 @@ output-metadata.json
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
+.vscode/
 
 # Keystore files
 *.jks
