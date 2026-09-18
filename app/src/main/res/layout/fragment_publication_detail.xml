@@ -225,36 +225,119 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Acciones del interesado -->
+            <!-- Acciones del interesado (no es dueño) -->
             <LinearLayout
                 android:id="@+id/panelInterested"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:visibility="gone">
 
-                <Button
-                    android:id="@+id/btnAskQuestion"
-                    android:layout_width="0dp"
+                <!-- Coordinación de la Entrega: Tarjeta destacada cuando la oferta fue aceptada -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardAcceptedOffer"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/detail_ask" />
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="3dp"
+                    app:cardBackgroundColor="#E8F5E9"
+                    android:visibility="gone">
 
-                <Button
-                    android:id="@+id/btnMakeOffer"
-                    android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/detail_offer_accepted_banner_title"
+                            android:textColor="#2E7D32"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAcceptedOfferDesc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="#1B5E20"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/detail_delivery_point_label"
+                            android:textColor="#333333"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvAcceptedDeliveryPoint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textColor="#212121"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/btnHowToGet"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:backgroundTint="#2E7D32"
+                            android:textColor="@android:color/white"
+                            android:text="@string/detail_how_to_get" />
+
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- Aviso de oferta pendiente del comprador -->
+                <TextView
+                    android:id="@+id/tvPendingOfferBanner"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/detail_offer" />
-                <Button
-                    android:id="@+id/btnFavoriteDetail"
-                    android:layout_width="0dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="#FFF3E0"
+                    android:padding="12dp"
+                    android:textColor="#E65100"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/detail_favorite" />
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btnAskQuestion"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/detail_ask" />
+
+                    <Button
+                        android:id="@+id/btnMakeOffer"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/detail_offer" />
+
+                    <Button
+                        android:id="@+id/btnFavoriteDetail"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/detail_favorite" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -304,6 +387,13 @@
                     android:layout_marginTop="4dp"
                     android:textColor="#424242"
                     android:textSize="14sp" />
+
+                <LinearLayout
+                    android:id="@+id/containerOffersList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical" />
 
             </LinearLayout>
 

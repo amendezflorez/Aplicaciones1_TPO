@@ -255,6 +255,10 @@ async function init() {
   // guardo (savedAt). camelCase como el resto de la tabla.
   await ensureColumn('saved_searches', 'lastSeenAt', 'DATETIME');
 
+  // Coordinación de la Entrega: punto de entrega acordado
+  await ensureColumn('offers', 'delivery_point', 'TEXT');
+  await ensureColumn('publications', 'delivery_point', 'TEXT');
+
   await dbAsync.run(
     'CREATE INDEX IF NOT EXISTS idx_photos_publication ON publication_photos (publication_id, position)'
   );
