@@ -2,7 +2,9 @@ package com.example.rondaapp.data.network;
 
 import com.example.rondaapp.data.model.AuthResponse;
 import com.example.rondaapp.data.model.CreatePublicationBody;
+import com.example.rondaapp.data.model.MyOffersResponse;
 import com.example.rondaapp.data.model.Offer;
+import com.example.rondaapp.data.model.OfferActionBody;
 import com.example.rondaapp.data.model.OfferBody;
 import com.example.rondaapp.data.model.OffersResponse;
 import com.example.rondaapp.data.model.PhotosResponse;
@@ -105,6 +107,15 @@ public interface ApiService {
 
     @POST("publications/{id}/offers")
     Call<Offer> makeOffer(@Path("id") int publicationId, @Body OfferBody body);
+
+    /** Aceptar, rechazar o contraofertar una oferta (punto 7). */
+    @PATCH("publications/{id}/offers/{offerId}")
+    Call<Offer> updateOfferStatus(@Path("id") int publicationId, @Path("offerId") int offerId,
+                                  @Body OfferActionBody body);
+
+    /** "Mis ofertas": las que mandé y las que recibí, en un mismo lugar. */
+    @GET("offers/mine")
+    Call<MyOffersResponse> getMyOffers();
 
     // --- Endpoints de Publicaciones (Home) ---
 
