@@ -200,4 +200,23 @@
     <string name="detail_sold">Publicación marcada como vendida</string>
     <string name="detail_status_error">No pudimos cambiar el estado</string>
     <string name="detail_offline">Sin conexión · estás viendo lo último que se guardó de esta publicación.</string>
+
+    <!-- Coordinación de la Entrega y Mapa -->
+    <string name="detail_how_to_get">Cómo llegar</string>
+    <string name="detail_offer_accepted_banner_title">🎉 ¡Oferta Aceptada!</string>
+    <string name="detail_offer_accepted_banner_desc">Tu oferta de $ %1$s fue aceptada por el vendedor.</string>
+    <string name="detail_offer_pending_banner">⏳ Tenés una oferta pendiente por $ %1$s</string>
+    <string name="detail_delivery_point_label">Punto de entrega acordado:</string>
+    <string name="detail_delivery_point_empty">No se especificó un punto de entrega</string>
+    <string name="dialog_exit_app_title">Salir a aplicación de mapas</string>
+    <string name="dialog_exit_app_message">Estás a punto de salir de Ronda para abrir Google Maps en modo navegación hacia:\n\n📍 %1$s\n\n¿Deseas continuar?</string>
+    <string name="dialog_exit_app_confirm">Abrir mapa</string>
+    <string name="dialog_exit_app_cancel">Cancelar</string>
+    <string name="error_no_maps_app">No se encontró una aplicación de mapas instalada</string>
+    <string name="detail_accept_offer">Aceptar</string>
+    <string name="detail_accept_offer_title">Aceptar Oferta</string>
+    <string name="detail_accept_offer_prompt">Punto de encuentro / entrega:</string>
+    <string name="detail_offer_accepted_success">¡Oferta aceptada!</string>
+    <string name="detail_offer_accepted_error">No se pudo aceptar la oferta</string>
+    <string name="detail_offer_accepted_badge">Aceptada</string>
 </resources>

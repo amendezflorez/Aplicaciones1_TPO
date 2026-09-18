@@ -18,13 +18,17 @@ public class Offer {
     @SerializedName("user_name")
     private String userName;
 
+    @SerializedName("delivery_point")
+    private String deliveryPoint;
+
     public int getId() { return id; }
     public double getAmount() { return amount; }
 
-    /** pendiente por ahora; aceptar/rechazar queda para más adelante. */
+    /** pendiente, aceptada, rechazada. */
     public String getStatus() { return status; }
 
     public String getCreatedAt() { return createdAt; }
     public String getUserId() { return userId; }
     public String getUserName() { return userName; }
+    public String getDeliveryPoint() { return deliveryPoint; }
 }

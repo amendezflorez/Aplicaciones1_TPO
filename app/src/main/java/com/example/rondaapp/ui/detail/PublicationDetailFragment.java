@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -24,6 +25,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.local.OfflineCache;
+import com.example.rondaapp.data.model.AcceptOfferBody;
+import com.example.rondaapp.ui.common.ExternalMapNavigator;
 import com.example.rondaapp.data.model.Offer;
 import com.example.rondaapp.data.model.OfferBody;
 import com.example.rondaapp.data.model.OffersResponse;
@@ -73,6 +76,9 @@ public class PublicationDetailFragment extends Fragment {
     @Inject
     OfflineCache offlineCache;
 
+    @Inject
+    ExternalMapNavigator mapNavigator;
+
     private SessionManager sessionManager;
     private ConnectivityWatcher connectivityWatcher;
 
@@ -95,6 +101,12 @@ public class PublicationDetailFragment extends Fragment {
     private LinearLayout panelInterested, panelSeller;
     private Button btnSellerProfile, btnAskQuestion, btnMakeOffer, btnTogglePause, btnMarkSold, btnFavoriteDetail;
     private RecyclerView rvGallery;
+
+    // Coordinación de la Entrega y Mapa
+    private CardView cardAcceptedOffer;
+    private TextView tvAcceptedOfferDesc, tvAcceptedDeliveryPoint, tvPendingOfferBanner;
+    private Button btnHowToGet;
+    private LinearLayout containerOffersList;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -168,6 +180,13 @@ public class PublicationDetailFragment extends Fragment {
         tvNoQuestions = view.findViewById(R.id.tvNoQuestions);
         tvOffersTitle = view.findViewById(R.id.tvOffersTitle);
         tvOffers = view.findViewById(R.id.tvOffers);
+
+        cardAcceptedOffer = view.findViewById(R.id.cardAcceptedOffer);
+        tvAcceptedOfferDesc = view.findViewById(R.id.tvAcceptedOfferDesc);
+        tvAcceptedDeliveryPoint = view.findViewById(R.id.tvAcceptedDeliveryPoint);
+        btnHowToGet = view.findViewById(R.id.btnHowToGet);
+        tvPendingOfferBanner = view.findViewById(R.id.tvPendingOfferBanner);
+        containerOffersList = view.findViewById(R.id.containerOffersList);
 
         rvGallery = view.findViewById(R.id.rvGallery);
     }
@@ -283,7 +302,11 @@ public class PublicationDetailFragment extends Fragment {
                 mostrar(response.body().getPublication(), response.body().getSeller());
                 cargarFotos();
                 cargarPreguntas();
-                if (esPropia) cargarOfertas();
+                if (esPropia) {
+                    cargarOfertas();
+                } else {
+                    cargarMiOferta();
+                }
             }
 
             @Override
@@ -499,19 +522,157 @@ public class PublicationDetailFragment extends Fragment {
         int total = ofertas != null ? ofertas.size() : 0;
         tvOffersTitle.setText(getString(R.string.detail_offers_title, total));
 
+        if (containerOffersList != null) {
+            containerOffersList.removeAllViews();
+        }
+
         if (total == 0) {
+            tvOffers.setVisibility(View.VISIBLE);
             tvOffers.setText(R.string.detail_no_offers);
             return;
         }
 
-        StringBuilder texto = new StringBuilder();
+        tvOffers.setVisibility(View.GONE);
+        if (containerOffersList == null) return;
+
+        LayoutInflater inflater = LayoutInflater.from(requireContext());
         for (Offer oferta : ofertas) {
-            if (texto.length() > 0) texto.append('\n');
-            texto.append(getString(R.string.detail_offer_row,
-                    oferta.getUserName() != null ? oferta.getUserName() : "",
-                    String.format(Locale.getDefault(), "%.2f", oferta.getAmount())));
+            View itemView = inflater.inflate(R.layout.item_seller_offer, containerOffersList, false);
+
+            TextView tvUserAndAmount = itemView.findViewById(R.id.tvOfferUserAndAmount);
+            TextView tvDeliveryPoint = itemView.findViewById(R.id.tvOfferDeliveryPoint);
+            Button btnAccept = itemView.findViewById(R.id.btnAcceptOffer);
+            TextView tvBadge = itemView.findViewById(R.id.tvOfferAcceptedBadge);
+
+            String userName = oferta.getUserName() != null ? oferta.getUserName() : "Usuario";
+            tvUserAndAmount.setText(getString(R.string.detail_offer_row,
+                    userName, String.format(Locale.getDefault(), "%.2f", oferta.getAmount())));
+
+            if ("aceptada".equalsIgnoreCase(oferta.getStatus())) {
+                btnAccept.setVisibility(View.GONE);
+                tvBadge.setVisibility(View.VISIBLE);
+                if (oferta.getDeliveryPoint() != null && !oferta.getDeliveryPoint().trim().isEmpty()) {
+                    tvDeliveryPoint.setVisibility(View.VISIBLE);
+                    tvDeliveryPoint.setText("📍 " + oferta.getDeliveryPoint());
+                } else {
+                    tvDeliveryPoint.setVisibility(View.GONE);
+                }
+            } else {
+                tvBadge.setVisibility(View.GONE);
+                tvDeliveryPoint.setVisibility(View.GONE);
+                btnAccept.setVisibility(View.VISIBLE);
+                btnAccept.setOnClickListener(v -> mostrarDialogoAceptarOferta(oferta));
+            }
+
+            containerOffersList.addView(itemView);
         }
-        tvOffers.setText(texto.toString());
+    }
+
+    private void mostrarDialogoAceptarOferta(Offer oferta) {
+        if (!exigirConexion()) return;
+
+        View vista = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_text_input, null, false);
+        EditText input = vista.findViewById(R.id.etDialogInput);
+        input.setHint(R.string.detail_accept_offer_prompt);
+        if (publicacion != null && publicacion.getZone() != null && !publicacion.getZone().trim().isEmpty()) {
+            input.setText(publicacion.getZone());
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.detail_accept_offer_title)
+                .setView(vista)
+                .setPositiveButton(R.string.detail_accept_offer, (dialog, which) -> {
+                    String puntoEntrega = input.getText().toString().trim();
+                    aceptarOferta(oferta.getId(), puntoEntrega);
+                })
+                .setNegativeButton(R.string.detail_cancel, null)
+                .show();
+    }
+
+    private void aceptarOferta(int offerId, String puntoEntrega) {
+        if (!exigirConexion()) return;
+
+        apiService.acceptOffer(offerId, new AcceptOfferBody(puntoEntrega)).enqueue(new Callback<Offer>() {
+            @Override
+            public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
+                if (!isAdded() || getView() == null) return;
+                if (!response.isSuccessful()) {
+                    Toast.makeText(getContext(), R.string.detail_offer_accepted_error, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.detail_offer_accepted_success, Toast.LENGTH_SHORT).show();
+                cargarOfertas();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
+                if (!isAdded() || getView() == null) return;
+                Toast.makeText(getContext(), R.string.detail_offer_accepted_error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void cargarMiOferta() {
+        apiService.getMyOffer(publicationId).enqueue(new Callback<Offer>() {
+            @Override
+            public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
+                if (!isAdded() || getView() == null) return;
+                if (response.isSuccessful() && response.body() != null) {
+                    mostrarMiOferta(response.body());
+                } else {
+                    ocultarMiOferta();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
+                // Sin conexión o fallo: mantener estado previo
+            }
+        });
+    }
+
+    private void ocultarMiOferta() {
+        if (cardAcceptedOffer != null) cardAcceptedOffer.setVisibility(View.GONE);
+        if (tvPendingOfferBanner != null) tvPendingOfferBanner.setVisibility(View.GONE);
+    }
+
+    private void mostrarMiOferta(Offer miOferta) {
+        if (miOferta == null) {
+            ocultarMiOferta();
+            return;
+        }
+
+        if ("aceptada".equalsIgnoreCase(miOferta.getStatus())) {
+            if (tvPendingOfferBanner != null) tvPendingOfferBanner.setVisibility(View.GONE);
+            if (cardAcceptedOffer != null) {
+                cardAcceptedOffer.setVisibility(View.VISIBLE);
+                String desc = getString(R.string.detail_offer_accepted_banner_desc,
+                        String.format(Locale.getDefault(), "%.2f", miOferta.getAmount()));
+                tvAcceptedOfferDesc.setText(desc);
+
+                String punto = (miOferta.getDeliveryPoint() != null && !miOferta.getDeliveryPoint().trim().isEmpty())
+                        ? miOferta.getDeliveryPoint()
+                        : (publicacion != null && publicacion.getZone() != null ? publicacion.getZone() : getString(R.string.detail_delivery_point_empty));
+                tvAcceptedDeliveryPoint.setText(punto);
+
+                btnHowToGet.setOnClickListener(v -> {
+                    mapNavigator.navigateWithWarning(requireContext(), punto);
+                });
+            }
+            if (btnMakeOffer != null) {
+                btnMakeOffer.setEnabled(false);
+            }
+        } else if ("pendiente".equalsIgnoreCase(miOferta.getStatus())) {
+            if (cardAcceptedOffer != null) cardAcceptedOffer.setVisibility(View.GONE);
+            if (tvPendingOfferBanner != null) {
+                tvPendingOfferBanner.setVisibility(View.VISIBLE);
+                tvPendingOfferBanner.setText(getString(R.string.detail_offer_pending_banner,
+                        String.format(Locale.getDefault(), "%.2f", miOferta.getAmount())));
+            }
+        } else {
+            ocultarMiOferta();
+        }
     }
 
     // ==========================================
@@ -559,9 +720,12 @@ public class PublicationDetailFragment extends Fragment {
             @Override
             public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
                 if (!isAdded() || getView() == null) return;
-                Toast.makeText(getContext(),
-                        response.isSuccessful() ? R.string.detail_offer_sent : R.string.detail_offer_error,
-                        Toast.LENGTH_SHORT).show();
+                if (response.isSuccessful()) {
+                    Toast.makeText(getContext(), R.string.detail_offer_sent, Toast.LENGTH_SHORT).show();
+                    cargarMiOferta();
+                } else {
+                    Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
