@@ -23,6 +23,9 @@ import com.example.rondaapp.data.model.Favorite;
 import com.example.rondaapp.data.model.FavoriteResponse;
 import com.example.rondaapp.data.model.SavedSearch;
 import com.example.rondaapp.data.model.SavedSearchResponse;
+import com.example.rondaapp.data.model.OperacionDto;
+import com.example.rondaapp.data.model.RatingRequestDto;
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -147,4 +150,19 @@ public interface ApiService {
     /** Punto 11: las novedades de la búsqueda se vuelven a contar desde ahora. */
     @PATCH("saved-searches/{id}/seen")
     Call<SimpleResponse> markSavedSearchSeen(@Path("id") int searchId);
+
+    // --- Endpoints de Historial y Calificaciones ---
+
+    @GET("operaciones")
+    Call<List<OperacionDto>> getOperaciones(
+            @Query("tipo") String tipo,
+            @Query("fechaInicio") String fechaInicio,
+            @Query("fechaFin") String fechaFin
+    );
+
+    @POST("operaciones/{id}/calificar")
+    Call<Void> calificarOperacion(
+            @Path("id") int operacionId,
+            @Body RatingRequestDto rating
+    );
 }

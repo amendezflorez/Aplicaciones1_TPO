@@ -74,6 +74,7 @@ public class HomeFragment extends Fragment {
     private Button btnMyPublications;
     private Button btnFavorites;
     private Button btnSavedSearches;
+    private Button btnHistorial;
     private ProgressBar progressPaging;
     private SessionManager sessionManager;
     private TextView tvOfflineBanner;
@@ -126,6 +127,7 @@ public class HomeFragment extends Fragment {
         btnMyPublications = view.findViewById(R.id.btnMyPublications);
         btnFavorites = view.findViewById(R.id.btnFavorites);
         btnSavedSearches = view.findViewById(R.id.btnSavedSearches);
+        btnHistorial = view.findViewById(R.id.btnHistorial);
         rvPublications = view.findViewById(R.id.rvPublications);
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
@@ -170,6 +172,13 @@ public class HomeFragment extends Fragment {
             btnSavedSearches.setOnClickListener(v -> {
                 if (!exigirConexion()) return;
                 Navigation.findNavController(v).navigate(R.id.action_home_to_savedSearches);
+            });
+        }
+
+        if (btnHistorial != null) {
+            btnHistorial.setOnClickListener(v -> {
+                if (!exigirConexion()) return;
+                Navigation.findNavController(v).navigate(R.id.action_home_to_historial);
             });
         }
 

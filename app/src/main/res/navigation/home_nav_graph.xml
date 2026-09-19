@@ -48,6 +48,10 @@
         <action
             android:id="@+id/action_home_to_savedSearches"
             app:destination="@id/savedSearchesFragment" />
+
+        <action
+            android:id="@+id/action_home_to_historial"
+            app:destination="@id/historialFragment" />
     </fragment>
 
     <!-- Punto 5: carga guiada para publicar un artículo -->
@@ -131,5 +135,25 @@
         android:name="com.example.rondaapp.ui.favorites.SavedSearchesFragment"
         android:label="Búsquedas guardadas"
         tools:layout="@layout/fragment_saved_searches" />
+
+    <fragment
+        android:id="@+id/historialFragment"
+        android:name="com.example.rondaapp.ui.historial.HistorialFragment"
+        android:label="Mi Historial"
+        tools:layout="@layout/fragment_historial">
+        <action
+            android:id="@+id/action_historial_to_calificar"
+            app:destination="@id/calificarDialogFragment" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/calificarDialogFragment"
+        android:name="com.example.rondaapp.ui.historial.CalificarDialogFragment"
+        android:label="Calificar Operación"
+        tools:layout="@layout/dialog_calificar">
+        <argument
+            android:name="operacionId"
+            app:argType="integer" />
+    </dialog>
 
 </navigation>
