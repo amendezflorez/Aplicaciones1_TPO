@@ -57,13 +57,6 @@ public class LoginFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         SessionManager sessionManager = new SessionManager(requireContext());
-        if (sessionManager.isLoggedIn()) {
-            Bundle args = new Bundle();
-            String name = sessionManager.getName();
-            args.putString("username", name != null ? name : "");
-            requestBiometricAuth(view, args);
-            return;
-        }
 
         EditText etUsername = view.findViewById(R.id.etUsername);
         EditText etPassword = view.findViewById(R.id.etPassword);
@@ -119,6 +112,13 @@ public class LoginFragment extends Fragment {
 
         tvLoginWithOtp.setOnClickListener(v ->
                 Navigation.findNavController(view).navigate(R.id.action_login_to_emailAuth));
+
+        if (sessionManager.isLoggedIn()) {
+            Bundle args = new Bundle();
+            String name = sessionManager.getName();
+            args.putString("username", name != null ? name : "");
+            requestBiometricAuth(view, args);
+        }
     }
 
     /**
