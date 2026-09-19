@@ -129,14 +129,14 @@
                 android:layout_weight="1"
                 android:text="Aplicar"
                 android:layout_marginStart="4dp" />
-
-            <Button
-                android:id="@+id/btnSaveSearch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Guardar esta búsqueda"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSaveSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Guardar esta búsqueda"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
     </LinearLayout>
 </ScrollView>
