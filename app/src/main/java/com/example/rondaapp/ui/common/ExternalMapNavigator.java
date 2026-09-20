@@ -56,23 +56,27 @@ public class ExternalMapNavigator {
     }
 
     /**
-     * Abre Google Maps (o app de mapas/navegador web por defecto) con la dirección precargada
-     * en modo navegación paso a paso.
+     * Abre Google Maps (o app de mapas/navegador web por defecto) con la dirección precargada.
+     * Utiliza la URI estándar 'geo:0,0?q=' para fijar el marcador en la ubicación del destino
+     * y desplegar el botón de navegación ("Cómo llegar"), evitando errores de cálculo de ruta
+     * cuando la ubicación actual/GPS no está disponible o está fuera del área (ej. emulador).
      *
      * @param context Contexto para iniciar la actividad externa.
      * @param destination Dirección de destino.
      */
     public void openMapsNavigation(@NonNull Context context, @NonNull String destination) {
-        // Intento 1: Navegación nativa de Google Maps (google.navigation:q=...)
-        Uri navigationUri = Uri.parse("google.navigation:q=" + Uri.encode(destination) + "&mode=d");
-        Intent mapIntent = new Intent(Intent.ACTION_VIEW, navigationUri);
+        String query = destination.trim();
+
+        // Intento 1: Búsqueda y marcador directo en Google Maps vía esquema 'geo:'
+        Uri geoUri = Uri.parse("geo:0,0?q=" + Uri.encode(query));
+        Intent mapIntent = new Intent(Intent.ACTION_VIEW, geoUri);
         mapIntent.setPackage("com.google.android.apps.maps");
 
         try {
             context.startActivity(mapIntent);
         } catch (ActivityNotFoundException e) {
-            // Intento 2 (Fallback): URL universal de direcciones de Google Maps, compatible con cualquier navegador o app de mapas
-            Uri fallbackUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=" + Uri.encode(destination));
+            // Intento 2 (Fallback): URL de búsqueda universal de Google Maps
+            Uri fallbackUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(query));
             Intent fallbackIntent = new Intent(Intent.ACTION_VIEW, fallbackUri);
             try {
                 context.startActivity(fallbackIntent);
