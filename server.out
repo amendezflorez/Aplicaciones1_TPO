@@ -1,0 +1,19 @@
+◇ injected env (6) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+📦 Conectado a la base de datos SQLite (ronda.db)
+🌱 Poblando datos para el historial de juan@hotmail.com...
+✅ Datos de demo cargados con éxito para Juan y contrapartes.
+[DB] Se insertaron fotos de prueba (incluyendo la raqueta real).
+===================================================
+✅ Backend Unificado de Ronda corriendo en http://localhost:8080
+📲 Base URL para Android Emulator: http://10.0.2.2:8080/api/
+===================================================
+[2026-09-20T21:37:31.119Z] GET /api/publications?sortBy=recent&page=1&limit=20
+[2026-09-20T21:37:31.123Z] GET /api/publications?sortBy=recent&page=1&limit=20
+[2026-09-20T21:37:33.865Z] GET /api/publications/47
+[2026-09-20T21:37:33.874Z] GET /api/publications/47
+[2026-09-20T21:37:33.889Z] GET /api/publications/47/questions
+[2026-09-20T21:37:33.890Z] GET /api/publications/47/photos
+[2026-09-20T21:37:33.899Z] GET /api/publications/47/questions
+[2026-09-20T21:37:33.905Z] GET /api/publications/47/my-offer
+[2026-09-20T21:37:33.907Z] GET /api/publications/47/photos
+[2026-09-20T21:37:33.921Z] GET /api/publications/47/my-offer

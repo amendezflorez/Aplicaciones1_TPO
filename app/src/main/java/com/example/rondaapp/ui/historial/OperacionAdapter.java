@@ -18,13 +18,14 @@ import java.util.Locale;
 public class OperacionAdapter extends RecyclerView.Adapter<OperacionAdapter.ViewHolder> {
 
     private List<OperacionDto> items = new ArrayList<>();
-    private OnCalificarClickListener listener;
+    private OnOperacionActionListener listener;
 
-    public interface OnCalificarClickListener {
+    public interface OnOperacionActionListener {
         void onCalificarClick(OperacionDto operacion);
+        void onContraparteClick(String userId);
     }
 
-    public OperacionAdapter(OnCalificarClickListener listener) {
+    public OperacionAdapter(OnOperacionActionListener listener) {
         this.listener = listener;
     }
 
@@ -51,6 +52,10 @@ public class OperacionAdapter extends RecyclerView.Adapter<OperacionAdapter.View
             item.contraparteNombre,
             item.fecha);
         holder.tvDetalle.setText(detalle);
+
+        holder.tvDetalle.setOnClickListener(v -> {
+            if (item.contraparteId != null) listener.onContraparteClick(item.contraparteId);
+        });
 
         if (puedeCalificar(item)) {
             holder.btnCalificar.setVisibility(View.VISIBLE);

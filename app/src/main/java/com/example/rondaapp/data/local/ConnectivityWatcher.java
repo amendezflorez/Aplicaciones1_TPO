@@ -43,8 +43,7 @@ public class ConnectivityWatcher {
 
         NetworkCapabilities caps = connectivityManager.getNetworkCapabilities(red);
         return caps != null
-                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+                && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
     }
 
     /** Empieza a avisar los cambios. Hay que cortar con {@link #dejarDeObservar()}. */

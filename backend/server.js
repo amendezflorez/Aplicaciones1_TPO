@@ -1296,6 +1296,7 @@ app.delete('/api/saved-searches/:id', requireAuth, async (req, res) => {
 app.get('/api/operaciones', requireAuth, async (req, res) => {
   const { tipo, fechaInicio, fechaFin } = req.query;
   const userId = req.userId;
+  console.log(`[HISTORIAL] Consultando para userId: ${userId}, tipo: ${tipo}`);
 
   try {
     // Buscamos ofertas aceptadas donde el usuario sea comprador o vendedor
@@ -1307,6 +1308,7 @@ app.get('/api/operaciones', requireAuth, async (req, res) => {
         o.created_at AS fecha,
         o.delivery_point AS fechaEntrega, -- Usamos delivery_point como placeholder de fecha entrega si no hay
         CASE WHEN o.user_id = ? THEN 'COMPRA' ELSE 'VENTA' END AS tipo,
+        CASE WHEN o.user_id = ? THEN p.user_id ELSE o.user_id END AS contraparteId,
         CASE WHEN o.user_id = ? THEN su.name ELSE bu.name END AS contraparteNombre,
         EXISTS(SELECT 1 FROM ratings r WHERE r.rater_user_id = ? AND r.comment LIKE '%' || o.id || '%') as calificada -- heuristica simple
       FROM offers o
@@ -1315,7 +1317,7 @@ app.get('/api/operaciones', requireAuth, async (req, res) => {
       LEFT JOIN users bu ON bu.id = o.user_id
       WHERE o.status = 'aceptada' AND (o.user_id = ? OR p.user_id = ?)
     `;
-    const params = [userId, userId, userId, userId, userId];
+    const params = [userId, userId, userId, userId, userId, userId];
 
     if (tipo && tipo !== 'TODOS') {
       sql += " AND (CASE WHEN o.user_id = ? THEN 'COMPRA' ELSE 'VENTA' END) = ?";
@@ -1334,7 +1336,12 @@ app.get('/api/operaciones', requireAuth, async (req, res) => {
     sql += " ORDER BY o.created_at DESC";
 
     const rows = await db.all(sql, params);
-    res.json(rows);
+    // Convertir 0/1 de SQLite a booleanos reales para que GSON no explote
+    const mappedRows = rows.map(row => ({
+      ...row,
+      calificada: !!row.calificada
+    }));
+    res.json(mappedRows);
   } catch (error) {
     console.error('Error en GET /api/operaciones:', error);
     res.status(500).json({ error: error.message });

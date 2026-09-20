@@ -66,6 +66,9 @@
         <action
             android:id="@+id/action_historial_to_calificar"
             app:destination="@id/calificarDialogFragment" />
+        <action
+            android:id="@+id/action_historial_to_publicProfile"
+            app:destination="@id/publicProfileFragment" />
     </fragment>
 
     <dialog

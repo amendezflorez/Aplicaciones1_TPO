@@ -3,10 +3,10 @@ package com.example.rondaapp.data.model;
 import com.google.gson.annotations.SerializedName;
 
 public class RatingRequestDto {
-    @SerializedName("estrellas")
+    @SerializedName("stars")
     public int estrellas;
     
-    @SerializedName("comentario")
+    @SerializedName("comment")
     public String comentario;
 
     public RatingRequestDto(int estrellas, String comentario) {

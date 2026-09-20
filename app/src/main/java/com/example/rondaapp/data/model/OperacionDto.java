@@ -15,6 +15,9 @@ public class OperacionDto {
     @SerializedName("contraparteNombre")
     public String contraparteNombre;
     
+    @SerializedName("contraparteId")
+    public String contraparteId;
+    
     @SerializedName("fecha")
     public String fecha;
     
