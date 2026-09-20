@@ -381,12 +381,20 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/tvOffers"
+                    android:id="@+id/tvNoOffers"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:textColor="#424242"
-                    android:textSize="14sp" />
+                    android:text="@string/detail_no_offers"
+                    android:textColor="#757575"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvOffers"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
 
                 <LinearLayout
                     android:id="@+id/containerOffersList"

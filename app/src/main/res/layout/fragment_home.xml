@@ -92,6 +92,15 @@
             android:layout_weight="1"
             android:text="@string/home_saved_searches"
             android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnMyOffers"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/home_my_offers"
+            android:textSize="11sp" />
     </LinearLayout>
 
     <!-- Punto 6: aviso de que se está mostrando información cacheada -->

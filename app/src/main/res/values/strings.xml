@@ -65,6 +65,7 @@
     <string name="price_increased">▲ Subió de $%1$.2f a $%2$.2f</string>
     <string name="home_favorites">Mis favoritos</string>
     <string name="home_saved_searches">Búsquedas guardadas</string>
+    <string name="home_my_offers">Mis ofertas</string>
 
     <!-- Perfil y reputación -->
     <string name="profile_my_title">Mis datos</string>
@@ -195,12 +196,10 @@
     <string name="detail_question_author">%1$s · %2$s</string>
     <string name="detail_offers_title">Ofertas recibidas (%1$d)</string>
     <string name="detail_no_offers">Todavía no recibiste ofertas.</string>
-    <string name="detail_offer_row">%1$s ofertó $ %2$s</string>
     <string name="detail_mark_sold">Marcar vendida</string>
     <string name="detail_sold">Publicación marcada como vendida</string>
     <string name="detail_status_error">No pudimos cambiar el estado</string>
     <string name="detail_offline">Sin conexión · estás viendo lo último que se guardó de esta publicación.</string>
-
     <!-- Coordinación de la Entrega y Mapa -->
     <string name="detail_how_to_get">Cómo llegar</string>
     <string name="detail_offer_accepted_banner_title">🎉 ¡Oferta Aceptada!</string>
@@ -219,4 +218,25 @@
     <string name="detail_offer_accepted_success">¡Oferta aceptada!</string>
     <string name="detail_offer_accepted_error">No se pudo aceptar la oferta</string>
     <string name="detail_offer_accepted_badge">Aceptada</string>
+
+    <string name="detail_offer_message_hint">Mensaje (opcional)</string>
+
+    <!-- Punto 7: ofertas y negociación -->
+    <string name="offer_action_accept">Aceptar</string>
+    <string name="offer_action_reject">Rechazar</string>
+    <string name="offer_action_counter">Contraofertar</string>
+    <string name="offer_action_success">Listo</string>
+    <string name="offer_action_error">No pudimos actualizar la oferta</string>
+    <string name="offer_counter_title">Hacer una contraoferta</string>
+    <string name="offer_counter_hint">Nuevo monto</string>
+
+    <string name="my_offers_sent_title">Ofertas enviadas</string>
+    <string name="my_offers_sent_empty">Todavía no hiciste ninguna oferta.</string>
+    <string name="my_offers_received_title">Ofertas recibidas</string>
+    <string name="my_offers_received_empty">Todavía no recibiste ofertas.</string>
+    <string name="my_offers_error">No pudimos cargar tus ofertas</string>
+    <string name="my_offer_seller_label">Vendedor: %1$s</string>
+    <string name="my_offer_buyer_label">Comprador: %1$s</string>
+    <string name="my_offer_amount_sent">Ofertaste $ %1$s (precio publicado $ %2$s)</string>
+    <string name="my_offer_amount_received">Te ofrecieron $ %1$s (precio publicado $ %2$s)</string>
 </resources>

@@ -15,6 +15,7 @@ app.use(express.json({ limit: '12mb' }));
 
 const PORT = process.env.PORT || 8080;
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutos de validez
+const OFFER_EXPIRY_MS = 48 * 60 * 60 * 1000; // Punto 7: 48hs de vigencia de una oferta
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -351,6 +352,10 @@ app.get('/api/publications', requireAuth, async (req, res) => {
     const rows = await db.all(listQuery, [...filterParams, limitNum, offset]);
     const countRow = await db.get(countQuery, filterParams);
 
+    // Punto 7: el listado nunca muestra la direccion exacta. Eso recien se
+    // revela en el detalle, y solo si corresponde (ver GET /api/publications/:id).
+    rows.forEach((r) => { delete r.address; delete r.lat; delete r.lng; });
+
     res.json({
       data: rows,
       page: pageNum,
@@ -426,6 +431,13 @@ app.post('/api/publications', requireAuth, async (req, res) => {
 // "Mis publicaciones": todas las del usuario, en cualquier estado.
 // Se diferencia del perfil publico, que solo lista las activas.
 app.get('/api/users/:id/publications', requireAuth, async (req, res) => {
+  // Punto 7: esta lista incluye la direccion exacta (es panel de gestion del
+  // propio dueno, a diferencia del perfil publico que solo trae las activas
+  // sin direccion). Sin este chequeo, cualquiera podia leer la direccion de
+  // publicaciones ajenas pasando el id de otro usuario en la URL.
+  if (req.params.id !== req.userId) {
+    return res.status(403).json({ success: false, message: 'Solo podes ver tus propias publicaciones' });
+  }
   try {
     const rows = await db.all(
       `SELECT p.*, (SELECT COUNT(*) FROM publication_photos ph
@@ -512,6 +524,24 @@ app.get('/api/publications/:id', requireAuth, async (req, res) => {
       }
     }
 
+    // Puente al punto 8 (coordinacion de entrega): la direccion exacta solo
+    // viaja si quien pregunta es el dueno o tiene una oferta aceptada sobre
+    // esta publicacion. El articulo se puede ver siempre; donde retirarlo, no.
+    const esDueno = publication.user_id === req.userId;
+    let puedeVerDireccion = esDueno;
+    if (!puedeVerDireccion) {
+      const ofertaAceptada = await db.get(
+        `SELECT id FROM offers WHERE publication_id = ? AND user_id = ? AND status = 'aceptada'`,
+        [publication.id, req.userId]
+      );
+      puedeVerDireccion = !!ofertaAceptada;
+    }
+    if (!puedeVerDireccion) {
+      delete publication.address;
+      delete publication.lat;
+      delete publication.lng;
+    }
+
     res.json({ publication, seller });
   } catch (error) {
     console.error('Error en GET /api/publications/:id', error);
@@ -571,6 +601,24 @@ app.post('/api/publications/:id/questions', requireAuth, async (req, res) => {
   }
 });
 
+const ACCIONES_OFERTA = ['aceptar', 'rechazar', 'contraofertar'];
+
+/**
+ * Punto 7: la caducidad es lazy, sin cron. Una oferta "en juego" (pendiente, o
+ * contraofertada y esperando la respuesta del comprador) cuyo plazo ya paso se
+ * persiste como "vencida" en el momento en que se lee (no cuando vence de
+ * verdad), asi nunca se muestra activa con el plazo cumplido. La contraoferta
+ * reusa el mismo expires_at de la oferta original: no se reinicia el reloj.
+ */
+async function expirarSiCorresponde(oferta) {
+  const enJuego = oferta.status === 'pendiente' || oferta.status === 'contraofertada';
+  if (enJuego && oferta.expires_at && Date.now() > oferta.expires_at) {
+    await db.run("UPDATE offers SET status = 'vencida' WHERE id = ?", [oferta.id]);
+    oferta.status = 'vencida';
+  }
+  return oferta;
+}
+
 // Las ofertas las ve solo el vendedor: son parte de la gestion de su publicacion.
 app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
   try {
@@ -583,14 +631,17 @@ app.get('/api/publications/:id/offers', requireAuth, async (req, res) => {
     }
 
     const rows = await db.all(
-      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
+      `SELECT o.id, o.amount, o.status, o.message, o.delivery_point, o.expires_at, o.created_at, o.user_id, u.name AS user_name
          FROM offers o
          LEFT JOIN users u ON u.id = o.user_id
         WHERE o.publication_id = ?
         ORDER BY o.amount DESC, o.created_at DESC`,
       [req.params.id]
     );
-    res.json({ data: rows, total: rows.length });
+    const data = [];
+    for (const row of rows) data.push(await expirarSiCorresponde(row));
+
+    res.json({ data, total: data.length });
   } catch (error) {
     console.error('Error en GET /api/publications/:id/offers', error);
     res.status(500).json({ success: false, message: error.message });
@@ -659,6 +710,7 @@ app.patch('/api/offers/:id/accept', requireAuth, async (req, res) => {
 
 app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
   const monto = Number(req.body.amount);
+  const mensaje = (req.body.message || '').trim();
   if (!Number.isFinite(monto) || monto <= 0) {
     return res.status(400).json({ success: false, message: 'El monto ofertado no es valido' });
   }
@@ -676,11 +728,11 @@ app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
     }
 
     const { lastID } = await db.run(
-      'INSERT INTO offers (publication_id, user_id, amount) VALUES (?, ?, ?)',
-      [publication.id, req.userId, monto]
+      'INSERT INTO offers (publication_id, user_id, amount, message, expires_at) VALUES (?, ?, ?, ?, ?)',
+      [publication.id, req.userId, monto, mensaje || null, Date.now() + OFFER_EXPIRY_MS]
     );
     const creada = await db.get(
-      `SELECT o.id, o.amount, o.status, o.delivery_point, o.created_at, o.user_id, u.name AS user_name
+      `SELECT o.id, o.amount, o.status, o.message, o.delivery_point, o.expires_at, o.created_at, o.user_id, u.name AS user_name
          FROM offers o LEFT JOIN users u ON u.id = o.user_id
         WHERE o.id = ?`,
       [lastID]
@@ -688,6 +740,138 @@ app.post('/api/publications/:id/offers', requireAuth, async (req, res) => {
     res.status(201).json(creada);
   } catch (error) {
     console.error('Error en POST /api/publications/:id/offers', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * Punto 7: cambiar el estado de una oferta. Una sola ruta para las tres
+ * acciones (aceptar / rechazar / contraofertar) porque las tres comparten la
+ * misma validacion de "quien puede tocar esta oferta en este estado".
+ *
+ * Reglas de transicion:
+ * - 'pendiente' -> el VENDEDOR puede aceptar, rechazar o contraofertar.
+ * - 'contraofertada' -> la pelota paso al COMPRADOR, que puede aceptar o
+ *   rechazar la contraoferta (no hay una segunda vuelta: sin parent_id no se
+ *   arma historial encadenado, ver nota en el reporte).
+ * - Cualquier otro estado (aceptada / rechazada / vencida) ya esta resuelto:
+ *   ninguna accion nueva se acepta sobre ella.
+ * - Aceptar (en cualquiera de los dos casos de arriba) rechaza automaticamente
+ *   las demas ofertas en danza (pendiente o contraofertada) de esa publicacion.
+ */
+app.patch('/api/publications/:id/offers/:offerId', requireAuth, async (req, res) => {
+  const { action, amount } = req.body;
+  if (!ACCIONES_OFERTA.includes(action)) {
+    return res.status(400).json({
+      success: false,
+      message: `La accion debe ser una de: ${ACCIONES_OFERTA.join(', ')}`
+    });
+  }
+
+  try {
+    const publication = await getPublicacionConVendedor(req.params.id);
+    if (!publication) {
+      return res.status(404).json({ success: false, message: 'Publicacion no encontrada' });
+    }
+
+    let oferta = await db.get(
+      'SELECT * FROM offers WHERE id = ? AND publication_id = ?',
+      [req.params.offerId, publication.id]
+    );
+    if (!oferta) {
+      return res.status(404).json({ success: false, message: 'Oferta no encontrada' });
+    }
+    oferta = await expirarSiCorresponde(oferta);
+
+    const esVendedor = publication.user_id === req.userId;
+    const esComprador = oferta.user_id === req.userId;
+
+    if (action === 'contraofertar') {
+      if (!esVendedor) {
+        return res.status(403).json({ success: false, message: 'Solo el vendedor puede contraofertar' });
+      }
+      if (oferta.status !== 'pendiente') {
+        return res.status(400).json({ success: false, message: 'Esa oferta ya no esta pendiente' });
+      }
+      const nuevoMonto = Number(amount);
+      if (!Number.isFinite(nuevoMonto) || nuevoMonto <= 0) {
+        return res.status(400).json({ success: false, message: 'El monto de la contraoferta no es valido' });
+      }
+      await db.run("UPDATE offers SET amount = ?, status = 'contraofertada' WHERE id = ?", [nuevoMonto, oferta.id]);
+    } else {
+      const nuevoEstado = action === 'aceptar' ? 'aceptada' : 'rechazada';
+      const puedeVendedor = esVendedor && oferta.status === 'pendiente';
+      const puedeComprador = esComprador && oferta.status === 'contraofertada';
+
+      if (!puedeVendedor && !puedeComprador) {
+        return res.status(403).json({ success: false, message: 'No podes cambiar el estado de esta oferta' });
+      }
+
+      await db.run('UPDATE offers SET status = ? WHERE id = ?', [nuevoEstado, oferta.id]);
+
+      if (nuevoEstado === 'aceptada') {
+        // Solo un comprador se queda con el punto de entrega: las demas ofertas
+        // en danza de esta publicacion (de este u otros compradores) se cierran.
+        await db.run(
+          `UPDATE offers SET status = 'rechazada'
+             WHERE publication_id = ? AND id != ? AND status IN ('pendiente', 'contraofertada')`,
+          [publication.id, oferta.id]
+        );
+        // La publicacion se cierra a nuevas ofertas: POST .../offers ya exige
+        // status = 'activa', asi que esto la bloquea sola (punto 5).
+        await db.run("UPDATE publications SET status = 'vendida' WHERE id = ?", [publication.id]);
+      }
+    }
+
+    const actualizada = await db.get(
+      `SELECT o.id, o.amount, o.status, o.message, o.expires_at, o.created_at, o.user_id, u.name AS user_name
+         FROM offers o LEFT JOIN users u ON u.id = o.user_id
+        WHERE o.id = ?`,
+      [oferta.id]
+    );
+    res.json(actualizada);
+  } catch (error) {
+    console.error('Error en PATCH /api/publications/:id/offers/:offerId', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// "Mis ofertas": las que mande como comprador y las que recibi como vendedor,
+// desde la misma tabla segun el rol. El vencimiento se recalcula en cada
+// lectura porque la caducidad es lazy (ver expirarSiCorresponde).
+app.get('/api/offers/mine', requireAuth, async (req, res) => {
+  try {
+    const enviadasRaw = await db.all(
+      `SELECT o.id, o.publication_id, o.amount, o.status, o.message, o.expires_at, o.created_at,
+              p.title AS publication_title, p.price AS publication_price,
+              p.user_id AS seller_id, su.name AS seller_name
+         FROM offers o
+         JOIN publications p ON p.id = o.publication_id
+         LEFT JOIN users su ON su.id = p.user_id
+        WHERE o.user_id = ?
+        ORDER BY o.created_at DESC`,
+      [req.userId]
+    );
+    const recibidasRaw = await db.all(
+      `SELECT o.id, o.publication_id, o.amount, o.status, o.message, o.expires_at, o.created_at,
+              p.title AS publication_title, p.price AS publication_price,
+              o.user_id AS buyer_id, u.name AS buyer_name
+         FROM offers o
+         JOIN publications p ON p.id = o.publication_id
+         LEFT JOIN users u ON u.id = o.user_id
+        WHERE p.user_id = ?
+        ORDER BY o.created_at DESC`,
+      [req.userId]
+    );
+
+    const enviadas = [];
+    for (const row of enviadasRaw) enviadas.push(await expirarSiCorresponde(row));
+    const recibidas = [];
+    for (const row of recibidasRaw) recibidas.push(await expirarSiCorresponde(row));
+
+    res.json({ enviadas, recibidas });
+  } catch (error) {
+    console.error('Error en GET /api/offers/mine', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -753,6 +937,9 @@ app.get('/api/users/:id', requireAuth, async (req, res) => {
         ORDER BY created_at DESC`,
       [id]
     );
+    // Punto 7: el perfil publico de otro usuario tampoco muestra la direccion
+    // exacta de sus publicaciones (misma regla que el listado del Home).
+    activePublications.forEach((p) => { delete p.address; delete p.lat; delete p.lng; });
 
     res.json({
       id: user.id,

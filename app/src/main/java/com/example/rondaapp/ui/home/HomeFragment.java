@@ -74,6 +74,7 @@ public class HomeFragment extends Fragment {
     private Button btnMyPublications;
     private Button btnFavorites;
     private Button btnSavedSearches;
+    private Button btnMyOffers;
     private ProgressBar progressPaging;
     private SessionManager sessionManager;
     private TextView tvOfflineBanner;
@@ -126,6 +127,7 @@ public class HomeFragment extends Fragment {
         btnMyPublications = view.findViewById(R.id.btnMyPublications);
         btnFavorites = view.findViewById(R.id.btnFavorites);
         btnSavedSearches = view.findViewById(R.id.btnSavedSearches);
+        btnMyOffers = view.findViewById(R.id.btnMyOffers);
         rvPublications = view.findViewById(R.id.rvPublications);
         searchView = view.findViewById(R.id.searchView);
         spinnerSort = view.findViewById(R.id.spinnerSort);
@@ -170,6 +172,14 @@ public class HomeFragment extends Fragment {
             btnSavedSearches.setOnClickListener(v -> {
                 if (!exigirConexion()) return;
                 Navigation.findNavController(v).navigate(R.id.action_home_to_savedSearches);
+            });
+        }
+
+        // Punto 7: ofertas enviadas y recibidas, en un mismo lugar.
+        if (btnMyOffers != null) {
+            btnMyOffers.setOnClickListener(v -> {
+                if (!exigirConexion()) return;
+                Navigation.findNavController(v).navigate(R.id.action_home_to_myOffers);
             });
         }
 
@@ -433,6 +443,15 @@ public class HomeFragment extends Fragment {
         });
 
         btnSaveSearch.setOnClickListener(v -> {
+            // El backend exige un texto de búsqueda para guardarla (es lo que la
+            // identifica en la lista de guardadas); sin esto tiraba un error
+            // genérico y no quedaba claro por qué.
+            if (currentSearch == null || currentSearch.trim().isEmpty()) {
+                Toast.makeText(requireContext(), "Escribí algo en el buscador antes de guardar la búsqueda",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             SavedSearch savedSearch = new SavedSearch();
             savedSearch.setUserId(sessionManager.getUserId());
             savedSearch.setSearchTerm(currentSearch);

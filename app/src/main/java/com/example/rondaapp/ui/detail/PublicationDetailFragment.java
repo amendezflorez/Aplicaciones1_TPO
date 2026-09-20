@@ -28,6 +28,7 @@ import com.example.rondaapp.data.local.OfflineCache;
 import com.example.rondaapp.data.model.AcceptOfferBody;
 import com.example.rondaapp.ui.common.ExternalMapNavigator;
 import com.example.rondaapp.data.model.Offer;
+import com.example.rondaapp.data.model.OfferActionBody;
 import com.example.rondaapp.data.model.OfferBody;
 import com.example.rondaapp.data.model.OffersResponse;
 import com.example.rondaapp.data.model.PhotosResponse;
@@ -91,16 +92,17 @@ public class PublicationDetailFragment extends Fragment {
 
     private final PhotoGalleryAdapter galleryAdapter = new PhotoGalleryAdapter();
     private final QuestionAdapter questionAdapter = new QuestionAdapter();
+    private final OfferAdapter offerAdapter = new OfferAdapter(this::manejarAccionOferta);
 
     private ProgressBar progressDetail;
     private View contentDetail, containerGallery;
     private TextView tvOfflineBanner, tvPhotoPosition, tvNoPhotos;
     private TextView tvTitle, tvPrice, tvCondition, tvZone, tvCategory, tvDate, tvStatus, tvDescription;
     private TextView tvSellerName, tvSellerReputation, tvSellerOperations, tvSellerSeniority;
-    private TextView tvQuestionsTitle, tvNoQuestions, tvOffersTitle, tvOffers;
+    private TextView tvQuestionsTitle, tvNoQuestions, tvOffersTitle, tvNoOffers;
     private LinearLayout panelInterested, panelSeller;
     private Button btnSellerProfile, btnAskQuestion, btnMakeOffer, btnTogglePause, btnMarkSold, btnFavoriteDetail;
-    private RecyclerView rvGallery;
+    private RecyclerView rvGallery, rvOffers;
 
     // Coordinación de la Entrega y Mapa
     private CardView cardAcceptedOffer;
@@ -134,6 +136,7 @@ public class PublicationDetailFragment extends Fragment {
         vincularVistas(view);
         configurarGaleria();
         configurarPreguntas(view);
+        configurarOfertas();
         configurarAcciones();
 
         cargar();
@@ -179,7 +182,7 @@ public class PublicationDetailFragment extends Fragment {
         tvQuestionsTitle = view.findViewById(R.id.tvQuestionsTitle);
         tvNoQuestions = view.findViewById(R.id.tvNoQuestions);
         tvOffersTitle = view.findViewById(R.id.tvOffersTitle);
-        tvOffers = view.findViewById(R.id.tvOffers);
+        tvNoOffers = view.findViewById(R.id.tvNoOffers);
 
         cardAcceptedOffer = view.findViewById(R.id.cardAcceptedOffer);
         tvAcceptedOfferDesc = view.findViewById(R.id.tvAcceptedOfferDesc);
@@ -189,6 +192,7 @@ public class PublicationDetailFragment extends Fragment {
         containerOffersList = view.findViewById(R.id.containerOffersList);
 
         rvGallery = view.findViewById(R.id.rvGallery);
+        rvOffers = view.findViewById(R.id.rvOffers);
     }
 
     private void configurarGaleria() {
@@ -216,6 +220,11 @@ public class PublicationDetailFragment extends Fragment {
         rvQuestions.setAdapter(questionAdapter);
     }
 
+    private void configurarOfertas() {
+        rvOffers.setLayoutManager(new LinearLayoutManager(requireContext()));
+        rvOffers.setAdapter(offerAdapter);
+    }
+
     private void configurarAcciones() {
         btnAskQuestion.setOnClickListener(v -> {
             if (!exigirConexion()) return;
@@ -226,9 +235,7 @@ public class PublicationDetailFragment extends Fragment {
 
         btnMakeOffer.setOnClickListener(v -> {
             if (!exigirConexion()) return;
-            pedirTexto(R.string.detail_offer_title, R.string.detail_offer_hint,
-                    InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL,
-                    this::enviarOferta);
+            mostrarDialogoOferta();
         });
 
         btnTogglePause.setOnClickListener(v -> {
@@ -521,96 +528,9 @@ public class PublicationDetailFragment extends Fragment {
     private void mostrarOfertas(List<Offer> ofertas) {
         int total = ofertas != null ? ofertas.size() : 0;
         tvOffersTitle.setText(getString(R.string.detail_offers_title, total));
-
-        if (containerOffersList != null) {
-            containerOffersList.removeAllViews();
-        }
-
-        if (total == 0) {
-            tvOffers.setVisibility(View.VISIBLE);
-            tvOffers.setText(R.string.detail_no_offers);
-            return;
-        }
-
-        tvOffers.setVisibility(View.GONE);
-        if (containerOffersList == null) return;
-
-        LayoutInflater inflater = LayoutInflater.from(requireContext());
-        for (Offer oferta : ofertas) {
-            View itemView = inflater.inflate(R.layout.item_seller_offer, containerOffersList, false);
-
-            TextView tvUserAndAmount = itemView.findViewById(R.id.tvOfferUserAndAmount);
-            TextView tvDeliveryPoint = itemView.findViewById(R.id.tvOfferDeliveryPoint);
-            Button btnAccept = itemView.findViewById(R.id.btnAcceptOffer);
-            TextView tvBadge = itemView.findViewById(R.id.tvOfferAcceptedBadge);
-
-            String userName = oferta.getUserName() != null ? oferta.getUserName() : "Usuario";
-            tvUserAndAmount.setText(getString(R.string.detail_offer_row,
-                    userName, String.format(Locale.getDefault(), "%.2f", oferta.getAmount())));
-
-            if ("aceptada".equalsIgnoreCase(oferta.getStatus())) {
-                btnAccept.setVisibility(View.GONE);
-                tvBadge.setVisibility(View.VISIBLE);
-                if (oferta.getDeliveryPoint() != null && !oferta.getDeliveryPoint().trim().isEmpty()) {
-                    tvDeliveryPoint.setVisibility(View.VISIBLE);
-                    tvDeliveryPoint.setText("📍 " + oferta.getDeliveryPoint());
-                } else {
-                    tvDeliveryPoint.setVisibility(View.GONE);
-                }
-            } else {
-                tvBadge.setVisibility(View.GONE);
-                tvDeliveryPoint.setVisibility(View.GONE);
-                btnAccept.setVisibility(View.VISIBLE);
-                btnAccept.setOnClickListener(v -> mostrarDialogoAceptarOferta(oferta));
-            }
-
-            containerOffersList.addView(itemView);
-        }
-    }
-
-    private void mostrarDialogoAceptarOferta(Offer oferta) {
-        if (!exigirConexion()) return;
-
-        View vista = LayoutInflater.from(requireContext())
-                .inflate(R.layout.dialog_text_input, null, false);
-        EditText input = vista.findViewById(R.id.etDialogInput);
-        input.setHint(R.string.detail_accept_offer_prompt);
-        if (publicacion != null && publicacion.getZone() != null && !publicacion.getZone().trim().isEmpty()) {
-            input.setText(publicacion.getZone());
-        }
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.detail_accept_offer_title)
-                .setView(vista)
-                .setPositiveButton(R.string.detail_accept_offer, (dialog, which) -> {
-                    String puntoEntrega = input.getText().toString().trim();
-                    aceptarOferta(oferta.getId(), puntoEntrega);
-                })
-                .setNegativeButton(R.string.detail_cancel, null)
-                .show();
-    }
-
-    private void aceptarOferta(int offerId, String puntoEntrega) {
-        if (!exigirConexion()) return;
-
-        apiService.acceptOffer(offerId, new AcceptOfferBody(puntoEntrega)).enqueue(new Callback<Offer>() {
-            @Override
-            public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
-                if (!isAdded() || getView() == null) return;
-                if (!response.isSuccessful()) {
-                    Toast.makeText(getContext(), R.string.detail_offer_accepted_error, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Toast.makeText(getContext(), R.string.detail_offer_accepted_success, Toast.LENGTH_SHORT).show();
-                cargarOfertas();
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
-                if (!isAdded() || getView() == null) return;
-                Toast.makeText(getContext(), R.string.detail_offer_accepted_error, Toast.LENGTH_SHORT).show();
-            }
-        });
+        tvNoOffers.setVisibility(total == 0 ? View.VISIBLE : View.GONE);
+        rvOffers.setVisibility(total == 0 ? View.GONE : View.VISIBLE);
+        offerAdapter.setOfertas(ofertas);
     }
 
     private void cargarMiOferta() {
@@ -703,10 +623,26 @@ public class PublicationDetailFragment extends Fragment {
                 });
     }
 
-    private void enviarOferta(String texto) {
+    /** Punto 7: monto obligatorio y mensaje opcional en el mismo diálogo. */
+    private void mostrarDialogoOferta() {
+        View vista = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_offer_input, null, false);
+        EditText etAmount = vista.findViewById(R.id.etOfferAmount);
+        EditText etMessage = vista.findViewById(R.id.etOfferMessage);
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.detail_offer_title)
+                .setView(vista)
+                .setPositiveButton(R.string.detail_send, (dialog, which) ->
+                        enviarOferta(etAmount.getText().toString(), etMessage.getText().toString()))
+                .setNegativeButton(R.string.detail_cancel, null)
+                .show();
+    }
+
+    private void enviarOferta(String textoMonto, String mensaje) {
         double monto;
         try {
-            monto = Double.parseDouble(texto.trim());
+            monto = Double.parseDouble(textoMonto.trim());
         } catch (NumberFormatException e) {
             Toast.makeText(getContext(), R.string.detail_offer_invalid, Toast.LENGTH_SHORT).show();
             return;
@@ -716,24 +652,79 @@ public class PublicationDetailFragment extends Fragment {
             return;
         }
 
-        apiService.makeOffer(publicationId, new OfferBody(monto)).enqueue(new Callback<Offer>() {
-            @Override
-            public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
-                if (!isAdded() || getView() == null) return;
-                if (response.isSuccessful()) {
-                    Toast.makeText(getContext(), R.string.detail_offer_sent, Toast.LENGTH_SHORT).show();
-                    cargarMiOferta();
-                } else {
-                    Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
-                }
-            }
+        apiService.makeOffer(publicationId, new OfferBody(monto, mensaje))
+                .enqueue(new Callback<Offer>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
+                        if (!isAdded() || getView() == null) return;
+                        if (response.isSuccessful()) {
+                            Toast.makeText(getContext(), R.string.detail_offer_sent, Toast.LENGTH_SHORT).show();
+                            cargarMiOferta();
+                        } else {
+                            Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-            @Override
-            public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
-                if (!isAdded() || getView() == null) return;
-                Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
+                        if (!isAdded() || getView() == null) return;
+                        Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    /**
+     * Punto 7: el vendedor gestiona sus ofertas recibidas desde acá. Contraofertar
+     * necesita un monto nuevo, así que primero pide ese dato con el mismo diálogo
+     * de una línea que usan preguntar y (antes) ofertar.
+     */
+    private void manejarAccionOferta(Offer oferta, String action) {
+        if (OfferActionBody.CONTRAOFERTAR.equals(action)) {
+            pedirTexto(R.string.offer_counter_title, R.string.offer_counter_hint,
+                    InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL,
+                    texto -> {
+                        double monto;
+                        try {
+                            monto = Double.parseDouble(texto.trim());
+                        } catch (NumberFormatException e) {
+                            Toast.makeText(getContext(), R.string.detail_offer_invalid, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        if (monto <= 0) {
+                            Toast.makeText(getContext(), R.string.detail_offer_invalid, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        enviarAccionOferta(oferta, action, monto);
+                    });
+            return;
+        }
+        enviarAccionOferta(oferta, action, null);
+    }
+
+    private void enviarAccionOferta(Offer oferta, String action, Double amount) {
+        if (!exigirConexion()) return;
+
+        apiService.updateOfferStatus(publicationId, oferta.getId(), new OfferActionBody(action, amount))
+                .enqueue(new Callback<Offer>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
+                        if (!isAdded() || getView() == null) return;
+                        if (!response.isSuccessful()) {
+                            Toast.makeText(getContext(), R.string.offer_action_error, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        Toast.makeText(getContext(), R.string.offer_action_success, Toast.LENGTH_SHORT).show();
+                        // Se recarga en vez de mutar en memoria: aceptar rechaza en
+                        // cascada las demás ofertas del lado del servidor.
+                        cargarOfertas();
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
+                        if (!isAdded() || getView() == null) return;
+                        Toast.makeText(getContext(), R.string.offer_action_error, Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void cambiarEstado(String nuevoEstado) {
