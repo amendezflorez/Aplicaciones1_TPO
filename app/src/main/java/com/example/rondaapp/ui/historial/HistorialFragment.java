@@ -42,7 +42,19 @@ public class HistorialFragment extends Fragment {
 
         RecyclerView rv = view.findViewById(R.id.rvOperaciones);
         rv.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new OperacionAdapter(this::onCalificarClick);
+        adapter = new OperacionAdapter(new OperacionAdapter.OnOperacionActionListener() {
+            @Override
+            public void onCalificarClick(OperacionDto operacion) {
+                HistorialFragment.this.onCalificarClick(operacion);
+            }
+
+            @Override
+            public void onContraparteClick(String userId) {
+                Bundle bundle = new Bundle();
+                bundle.putString("userId", userId);
+                Navigation.findNavController(requireView()).navigate(R.id.action_historial_to_publicProfile, bundle);
+            }
+        });
         rv.setAdapter(adapter);
 
         setupFilters(view);
@@ -57,6 +69,16 @@ public class HistorialFragment extends Fragment {
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, tipos);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinner.setAdapter(spinnerAdapter);
+
+        spinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                currentTipo = tipos[position];
+                cargarDatos();
+            }
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+        });
 
         Button btnInicio = view.findViewById(R.id.btnFechaInicio);
         Button btnFin = view.findViewById(R.id.btnFechaFin);
@@ -87,15 +109,19 @@ public class HistorialFragment extends Fragment {
             @Override
             public void onResponse(Call<List<OperacionDto>> call, Response<List<OperacionDto>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    adapter.setItems(response.body());
+                    List<OperacionDto> list = response.body();
+                    adapter.setItems(list);
+                    if (list.isEmpty()) {
+                        Toast.makeText(getContext(), "Historial vacío para este usuario", Toast.LENGTH_LONG).show();
+                    }
                 } else {
-                    Toast.makeText(getContext(), "Error al cargar historial", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Error: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<List<OperacionDto>> call, Throwable t) {
-                Toast.makeText(getContext(), "Falla de red", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Falla: " + t.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
     }
