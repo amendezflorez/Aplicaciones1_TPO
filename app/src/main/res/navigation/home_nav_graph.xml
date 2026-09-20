@@ -50,9 +50,33 @@
             app:destination="@id/savedSearchesFragment" />
 
         <action
+            android:id="@+id/action_home_to_myOffers"
+            app:destination="@id/myOffersFragment" />
+
+        <action
             android:id="@+id/action_home_to_historial"
             app:destination="@id/historialFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/historialFragment"
+        android:name="com.example.rondaapp.ui.historial.HistorialFragment"
+        android:label="Historial de Operaciones"
+        tools:layout="@layout/fragment_historial">
+        <action
+            android:id="@+id/action_historial_to_calificar"
+            app:destination="@id/calificarDialogFragment" />
+    </fragment>
+
+    <dialog
+        android:id="@+id/calificarDialogFragment"
+        android:name="com.example.rondaapp.ui.historial.CalificarDialogFragment"
+        android:label="Calificar"
+        tools:layout="@layout/dialog_calificar">
+        <argument
+            android:name="operacionId"
+            app:argType="integer" />
+    </dialog>
 
     <!-- Punto 5: carga guiada para publicar un artículo -->
     <fragment
@@ -136,24 +160,16 @@
         android:label="Búsquedas guardadas"
         tools:layout="@layout/fragment_saved_searches" />
 
+    <!-- Punto 7: Mis ofertas, enviadas y recibidas -->
     <fragment
-        android:id="@+id/historialFragment"
-        android:name="com.example.rondaapp.ui.historial.HistorialFragment"
-        android:label="Mi Historial"
-        tools:layout="@layout/fragment_historial">
-        <action
-            android:id="@+id/action_historial_to_calificar"
-            app:destination="@id/calificarDialogFragment" />
-    </fragment>
+        android:id="@+id/myOffersFragment"
+        android:name="com.example.rondaapp.ui.offers.MyOffersFragment"
+        android:label="@string/home_my_offers"
+        tools:layout="@layout/fragment_my_offers">
 
-    <dialog
-        android:id="@+id/calificarDialogFragment"
-        android:name="com.example.rondaapp.ui.historial.CalificarDialogFragment"
-        android:label="Calificar Operación"
-        tools:layout="@layout/dialog_calificar">
-        <argument
-            android:name="operacionId"
-            app:argType="integer" />
-    </dialog>
+        <action
+            android:id="@+id/action_myOffers_to_detail"
+            app:destination="@id/publicationDetailFragment" />
+    </fragment>
 
 </navigation>

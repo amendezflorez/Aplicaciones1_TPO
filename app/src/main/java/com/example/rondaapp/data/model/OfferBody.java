@@ -4,8 +4,10 @@ package com.example.rondaapp.data.model;
 public class OfferBody {
 
     private final double amount;
+    private final String message;
 
-    public OfferBody(double amount) {
+    public OfferBody(double amount, String message) {
         this.amount = amount;
+        this.message = message;
     }
 }
