@@ -299,6 +299,10 @@ async function init() {
   // guardo (savedAt). camelCase como el resto de la tabla.
   await ensureColumn('saved_searches', 'lastSeenAt', 'DATETIME');
 
+  // Coordinación de la Entrega: punto de entrega acordado
+  await ensureColumn('offers', 'delivery_point', 'TEXT');
+  await ensureColumn('publications', 'delivery_point', 'TEXT');
+
   // Punto 7: direccion exacta de entrega. Vive en la publicacion (es el punto
   // de encuentro fijo que define el vendedor), no en la oferta. El endpoint de
   // detalle recien la manda si quien pregunta es el dueno o tiene una oferta

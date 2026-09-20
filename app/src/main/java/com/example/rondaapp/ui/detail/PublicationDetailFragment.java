@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -24,6 +25,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.local.ConnectivityWatcher;
 import com.example.rondaapp.data.local.OfflineCache;
+import com.example.rondaapp.data.model.AcceptOfferBody;
+import com.example.rondaapp.ui.common.ExternalMapNavigator;
 import com.example.rondaapp.data.model.Offer;
 import com.example.rondaapp.data.model.OfferActionBody;
 import com.example.rondaapp.data.model.OfferBody;
@@ -74,6 +77,9 @@ public class PublicationDetailFragment extends Fragment {
     @Inject
     OfflineCache offlineCache;
 
+    @Inject
+    ExternalMapNavigator mapNavigator;
+
     private SessionManager sessionManager;
     private ConnectivityWatcher connectivityWatcher;
 
@@ -97,6 +103,12 @@ public class PublicationDetailFragment extends Fragment {
     private LinearLayout panelInterested, panelSeller;
     private Button btnSellerProfile, btnAskQuestion, btnMakeOffer, btnTogglePause, btnMarkSold, btnFavoriteDetail;
     private RecyclerView rvGallery, rvOffers;
+
+    // Coordinación de la Entrega y Mapa
+    private CardView cardAcceptedOffer;
+    private TextView tvAcceptedOfferDesc, tvAcceptedDeliveryPoint, tvPendingOfferBanner;
+    private Button btnHowToGet;
+    private LinearLayout containerOffersList;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -171,6 +183,13 @@ public class PublicationDetailFragment extends Fragment {
         tvNoQuestions = view.findViewById(R.id.tvNoQuestions);
         tvOffersTitle = view.findViewById(R.id.tvOffersTitle);
         tvNoOffers = view.findViewById(R.id.tvNoOffers);
+
+        cardAcceptedOffer = view.findViewById(R.id.cardAcceptedOffer);
+        tvAcceptedOfferDesc = view.findViewById(R.id.tvAcceptedOfferDesc);
+        tvAcceptedDeliveryPoint = view.findViewById(R.id.tvAcceptedDeliveryPoint);
+        btnHowToGet = view.findViewById(R.id.btnHowToGet);
+        tvPendingOfferBanner = view.findViewById(R.id.tvPendingOfferBanner);
+        containerOffersList = view.findViewById(R.id.containerOffersList);
 
         rvGallery = view.findViewById(R.id.rvGallery);
         rvOffers = view.findViewById(R.id.rvOffers);
@@ -290,7 +309,11 @@ public class PublicationDetailFragment extends Fragment {
                 mostrar(response.body().getPublication(), response.body().getSeller());
                 cargarFotos();
                 cargarPreguntas();
-                if (esPropia) cargarOfertas();
+                if (esPropia) {
+                    cargarOfertas();
+                } else {
+                    cargarMiOferta();
+                }
             }
 
             @Override
@@ -510,6 +533,68 @@ public class PublicationDetailFragment extends Fragment {
         offerAdapter.setOfertas(ofertas);
     }
 
+    private void cargarMiOferta() {
+        apiService.getMyOffer(publicationId).enqueue(new Callback<Offer>() {
+            @Override
+            public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
+                if (!isAdded() || getView() == null) return;
+                if (response.isSuccessful() && response.body() != null) {
+                    mostrarMiOferta(response.body());
+                } else {
+                    ocultarMiOferta();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Offer> call, @NonNull Throwable t) {
+                // Sin conexión o fallo: mantener estado previo
+            }
+        });
+    }
+
+    private void ocultarMiOferta() {
+        if (cardAcceptedOffer != null) cardAcceptedOffer.setVisibility(View.GONE);
+        if (tvPendingOfferBanner != null) tvPendingOfferBanner.setVisibility(View.GONE);
+    }
+
+    private void mostrarMiOferta(Offer miOferta) {
+        if (miOferta == null) {
+            ocultarMiOferta();
+            return;
+        }
+
+        if ("aceptada".equalsIgnoreCase(miOferta.getStatus())) {
+            if (tvPendingOfferBanner != null) tvPendingOfferBanner.setVisibility(View.GONE);
+            if (cardAcceptedOffer != null) {
+                cardAcceptedOffer.setVisibility(View.VISIBLE);
+                String desc = getString(R.string.detail_offer_accepted_banner_desc,
+                        String.format(Locale.getDefault(), "%.2f", miOferta.getAmount()));
+                tvAcceptedOfferDesc.setText(desc);
+
+                String punto = (miOferta.getDeliveryPoint() != null && !miOferta.getDeliveryPoint().trim().isEmpty())
+                        ? miOferta.getDeliveryPoint()
+                        : (publicacion != null && publicacion.getZone() != null ? publicacion.getZone() : getString(R.string.detail_delivery_point_empty));
+                tvAcceptedDeliveryPoint.setText(punto);
+
+                btnHowToGet.setOnClickListener(v -> {
+                    mapNavigator.navigateWithWarning(requireContext(), punto);
+                });
+            }
+            if (btnMakeOffer != null) {
+                btnMakeOffer.setEnabled(false);
+            }
+        } else if ("pendiente".equalsIgnoreCase(miOferta.getStatus())) {
+            if (cardAcceptedOffer != null) cardAcceptedOffer.setVisibility(View.GONE);
+            if (tvPendingOfferBanner != null) {
+                tvPendingOfferBanner.setVisibility(View.VISIBLE);
+                tvPendingOfferBanner.setText(getString(R.string.detail_offer_pending_banner,
+                        String.format(Locale.getDefault(), "%.2f", miOferta.getAmount())));
+            }
+        } else {
+            ocultarMiOferta();
+        }
+    }
+
     // ==========================================
     // ACCIONES
     // ==========================================
@@ -572,9 +657,12 @@ public class PublicationDetailFragment extends Fragment {
                     @Override
                     public void onResponse(@NonNull Call<Offer> call, @NonNull Response<Offer> response) {
                         if (!isAdded() || getView() == null) return;
-                        Toast.makeText(getContext(),
-                                response.isSuccessful() ? R.string.detail_offer_sent : R.string.detail_offer_error,
-                                Toast.LENGTH_SHORT).show();
+                        if (response.isSuccessful()) {
+                            Toast.makeText(getContext(), R.string.detail_offer_sent, Toast.LENGTH_SHORT).show();
+                            cargarMiOferta();
+                        } else {
+                            Toast.makeText(getContext(), R.string.detail_offer_error, Toast.LENGTH_SHORT).show();
+                        }
                     }
 
                     @Override

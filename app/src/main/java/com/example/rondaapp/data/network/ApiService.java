@@ -1,5 +1,6 @@
 package com.example.rondaapp.data.network;
 
+import com.example.rondaapp.data.model.AcceptOfferBody;
 import com.example.rondaapp.data.model.AuthResponse;
 import com.example.rondaapp.data.model.CreatePublicationBody;
 import com.example.rondaapp.data.model.MyOffersResponse;
@@ -107,6 +108,14 @@ public interface ApiService {
 
     @POST("publications/{id}/offers")
     Call<Offer> makeOffer(@Path("id") int publicationId, @Body OfferBody body);
+
+    /** Consulta la oferta realizada por el usuario actual en la publicación. */
+    @GET("publications/{id}/my-offer")
+    Call<Offer> getMyOffer(@Path("id") int publicationId);
+
+    /** Acepta una oferta y confirma el punto de entrega. Solo el vendedor. */
+    @PATCH("offers/{id}/accept")
+    Call<Offer> acceptOffer(@Path("id") int offerId, @Body AcceptOfferBody body);
 
     /** Aceptar, rechazar o contraofertar una oferta (punto 7). */
     @PATCH("publications/{id}/offers/{offerId}")

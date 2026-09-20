@@ -25,8 +25,12 @@ public class Offer {
     @SerializedName("user_name")
     private String userName;
 
+    @SerializedName("delivery_point")
+    private String deliveryPoint;
+
     public int getId() { return id; }
     public double getAmount() { return amount; }
+
     public String getStatus() { return status; }
 
     /** Mensaje opcional que dejó el comprador junto con la oferta. */
@@ -35,4 +39,5 @@ public class Offer {
     public String getCreatedAt() { return createdAt; }
     public String getUserId() { return userId; }
     public String getUserName() { return userName; }
+    public String getDeliveryPoint() { return deliveryPoint; }
 }
