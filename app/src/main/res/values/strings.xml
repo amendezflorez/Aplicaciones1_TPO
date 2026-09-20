@@ -65,7 +65,7 @@
     <string name="price_increased">▲ Subió de $%1$.2f a $%2$.2f</string>
     <string name="home_favorites">Mis favoritos</string>
     <string name="home_saved_searches">Búsquedas guardadas</string>
-    <string name="home_my_offers">Historial</string>
+    <string name="home_my_offers">Mis ofertas</string>
 
     <!-- Perfil y reputación -->
     <string name="profile_my_title">Mis datos</string>
