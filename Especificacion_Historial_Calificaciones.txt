@@ -1,0 +1,105 @@
+Implementación del Caso de Uso: Historial y Calificaciones - Guía Senior
+
+---
+1. CAPA DE NETWORK Y MODELOS (Retrofit + Hilt)
+
+// OperacionDto.java
+public class OperacionDto {
+    public int id;
+    public String articuloNombre;
+    public double montoFinal;
+    public String contraparteNombre;
+    public String fecha; // ISO-8601
+    public String tipo; // "COMPRA" o "VENTA"
+    public String fechaEntrega; // ISO-8601
+    public boolean calificada;
+}
+
+// RatingRequestDto.java
+public class RatingRequestDto {
+    public int estrellas;
+    public String comentario;
+
+    public RatingRequestDto(int estrellas, String comentario) {
+        this.estrellas = estrellas;
+        this.comentario = comentario;
+    }
+}
+
+// ApiService.java (Update)
+public interface ApiService {
+    @GET("operaciones")
+    Call<List<OperacionDto>> getOperaciones(
+        @Query("tipo") String tipo,
+        @Query("fechaInicio") String fechaInicio,
+        @Query("fechaFin") String fechaFin
+    );
+
+    @POST("operaciones/{id}/calificar")
+    Call<Void> calificarOperacion(
+        @Path("id") int operacionId,
+        @Body RatingRequestDto rating
+    );
+}
+
+---
+2. CAPA DE PERSISTENCIA (Room)
+
+@Entity(tableName = "operaciones")
+public class OperacionEntity {
+    @PrimaryKey public int id;
+    public String articuloNombre;
+    public double montoFinal;
+    public String contraparteNombre;
+    public long fechaTimestamp;
+    public String tipo;
+    public boolean calificada;
+    public long fechaEntregaTimestamp;
+}
+
+@Dao
+public interface OperacionDao {
+    @Query("SELECT * FROM operaciones WHERE tipo = :tipo OR :tipo = 'TODOS' AND fechaTimestamp BETWEEN :inicio AND :fin ORDER BY fechaTimestamp DESC")
+    LiveData<List<OperacionEntity>> getFilteredOperaciones(String tipo, long inicio, long fin);
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertAll(List<OperacionEntity> operaciones);
+}
+
+---
+3. CAPA DE UI (Fragments y Layouts)
+
+// HistorialFragment.java
+@AndroidEntryPoint
+public class HistorialFragment extends Fragment {
+    @Inject ApiService apiService;
+    // ... Lógica de filtrado y RecyclerView ...
+}
+
+// CalificarDialogFragment.java
+@AndroidEntryPoint
+public class CalificarDialogFragment extends DialogFragment {
+    private int operacionId;
+    @Inject ApiService apiService;
+    // ... Lógica de envío de calificación ...
+}
+
+---
+4. NAVEGACIÓN (nav_graph.xml)
+
+<fragment
+    android:id="@+id/historialFragment"
+    android:name="com.example.rondaapp.ui.historial.HistorialFragment"
+    android:label="Historial">
+    <action
+        android:id="@+id/action_historial_to_calificar"
+        app:destination="@id/calificarDialogFragment" />
+</fragment>
+
+<dialog
+    android:id="@+id/calificarDialogFragment"
+    android:name="com.example.rondaapp.ui.historial.CalificarDialogFragment">
+    <argument
+        android:name="operacionId"
+        app:argType="integer" />
+</dialog>

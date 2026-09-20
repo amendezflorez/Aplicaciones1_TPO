@@ -335,6 +335,36 @@ async function init() {
   await seedUsersAndRatings();
   await assignOwnerlessPublications();
   await seedOffers();
+  await seedOperacionesAceptadas();
+}
+
+/**
+ * Punto 10: Sembrar operaciones aceptadas para probar el historial.
+ * Usamos la primera oferta de SEED_OFFERS y la marcamos como aceptada.
+ */
+async function seedOperacionesAceptadas() {
+  const row = await dbAsync.get("SELECT COUNT(*) as count FROM offers WHERE status = 'aceptada'");
+  if (row && row.count > 0) return;
+
+  // Ana es vendedora (seed-ana), Carla es compradora (seed-carla).
+  // La primera publicación es la bici.
+  // Ponemos una fecha de hace 2 días para que el botón "Calificar" aparezca (dentro de los 7 días).
+  const haceDosDias = new Date();
+  haceDosDias.setDate(haceDosDias.getDate() - 2);
+  const fechaStr = haceDosDias.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  await dbAsync.run(
+    `UPDATE offers SET status = 'aceptada', delivery_point = ? WHERE id = 1`,
+    [fechaStr]
+  );
+
+  // También creamos una venta para Ana (ella vendió a Bruno)
+  await dbAsync.run(
+    `UPDATE offers SET status = 'aceptada', delivery_point = ? WHERE id = 2`,
+    [fechaStr]
+  );
+
+  console.log('[DB] Se sembraron operaciones aceptadas para el historial.');
 }
 
 /** El server espera esta promesa antes de escuchar, para no atender con el esquema a medio migrar. */

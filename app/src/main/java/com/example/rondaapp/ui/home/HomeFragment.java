@@ -179,7 +179,7 @@ public class HomeFragment extends Fragment {
         if (btnMyOffers != null) {
             btnMyOffers.setOnClickListener(v -> {
                 if (!exigirConexion()) return;
-                Navigation.findNavController(v).navigate(R.id.action_home_to_myOffers);
+                Navigation.findNavController(v).navigate(R.id.action_home_to_historial);
             });
         }
 

@@ -1289,6 +1289,98 @@ app.delete('/api/saved-searches/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ==========================================
+// 4. ENDPOINTS DE HISTORIAL Y CALIFICACIONES
+// ==========================================
+
+app.get('/api/operaciones', requireAuth, async (req, res) => {
+  const { tipo, fechaInicio, fechaFin } = req.query;
+  const userId = req.userId;
+
+  try {
+    // Buscamos ofertas aceptadas donde el usuario sea comprador o vendedor
+    let sql = `
+      SELECT
+        o.id,
+        p.title AS articuloNombre,
+        o.amount AS montoFinal,
+        o.created_at AS fecha,
+        o.delivery_point AS fechaEntrega, -- Usamos delivery_point como placeholder de fecha entrega si no hay
+        CASE WHEN o.user_id = ? THEN 'COMPRA' ELSE 'VENTA' END AS tipo,
+        CASE WHEN o.user_id = ? THEN su.name ELSE bu.name END AS contraparteNombre,
+        EXISTS(SELECT 1 FROM ratings r WHERE r.rater_user_id = ? AND r.comment LIKE '%' || o.id || '%') as calificada -- heuristica simple
+      FROM offers o
+      JOIN publications p ON p.id = o.publication_id
+      LEFT JOIN users su ON su.id = p.user_id
+      LEFT JOIN users bu ON bu.id = o.user_id
+      WHERE o.status = 'aceptada' AND (o.user_id = ? OR p.user_id = ?)
+    `;
+    const params = [userId, userId, userId, userId, userId];
+
+    if (tipo && tipo !== 'TODOS') {
+      sql += " AND (CASE WHEN o.user_id = ? THEN 'COMPRA' ELSE 'VENTA' END) = ?";
+      params.push(userId, tipo);
+    }
+
+    if (fechaInicio) {
+      sql += " AND o.created_at >= ?";
+      params.push(fechaInicio);
+    }
+    if (fechaFin) {
+      sql += " AND o.created_at <= ?";
+      params.push(fechaFin);
+    }
+
+    sql += " ORDER BY o.created_at DESC";
+
+    const rows = await db.all(sql, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error en GET /api/operaciones:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/operaciones/:id/calificar', requireAuth, async (req, res) => {
+  const { stars, comment } = req.body;
+  const operacionId = req.params.id;
+  const raterId = req.userId;
+
+  try {
+    const operacion = await db.get(
+      `SELECT o.*, p.user_id as seller_id FROM offers o
+       JOIN publications p ON p.id = o.publication_id
+       WHERE o.id = ? AND o.status = 'aceptada'`,
+      [operacionId]
+    );
+
+    if (!operacion) return res.status(404).json({ message: 'Operación no encontrada' });
+
+    // Determinar a quién calificar y qué rol tiene el calificado
+    let ratedUserId, role;
+    if (operacion.user_id === raterId) {
+       // Soy el comprador, califico al vendedor
+       ratedUserId = operacion.seller_id;
+       role = 'vendedor';
+    } else if (operacion.seller_id === raterId) {
+       // Soy el vendedor, califico al comprador
+       ratedUserId = operacion.user_id;
+       role = 'comprador';
+    } else {
+       return res.status(403).json({ message: 'No participaste en esta operación' });
+    }
+
+    await db.run(
+      'INSERT INTO ratings (rated_user_id, rater_user_id, stars, role, comment) VALUES (?, ?, ?, ?, ?)',
+      [ratedUserId, raterId, stars, role, comment + " (Op #" + operacionId + ")"]
+    );
+
+    res.status(201).send();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Se espera a que el esquema termine de migrar antes de atender pedidos.
 db.ready
 

@@ -11,12 +11,14 @@ import androidx.room.RoomDatabase;
  * crea con fallbackToDestructiveMigration.
  */
 @Database(
-        entities = {CachedPublication.class, CachedPhoto.class},
+        entities = {CachedPublication.class, CachedPhoto.class, OperacionEntity.class},
         // v2: CachedPublication guarda también el vendedor. Al subir la versión el
         // caché viejo se descarta (fallbackToDestructiveMigration) y se rearma solo.
-        version = 2,
+        version = 3,
         exportSchema = false)
 public abstract class RondaDatabase extends RoomDatabase {
 
     public abstract CacheDao cacheDao();
+
+    public abstract OperacionDao operacionDao();
 }
