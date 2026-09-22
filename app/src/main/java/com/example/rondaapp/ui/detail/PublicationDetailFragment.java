@@ -42,6 +42,8 @@ import com.example.rondaapp.data.model.QuestionsResponse;
 import com.example.rondaapp.data.model.Reputation;
 import com.example.rondaapp.data.model.Seller;
 import com.example.rondaapp.data.model.Favorite;
+import com.example.rondaapp.data.model.FavoriteResponse;
+import com.example.rondaapp.data.model.SimpleResponse;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
 import com.example.rondaapp.ui.profile.ProfileFormatter;
@@ -89,6 +91,15 @@ public class PublicationDetailFragment extends Fragment {
     @Nullable
     private Seller vendedor;
     private boolean esPropia;
+    /**
+     * Id de la fila de favorito de ESTA publicación, si ya es favorita del
+     * usuario actual (null si no). Sin esto el botón no tenía forma de saber
+     * su propio estado: siempre mandaba "agregar", y si ya era favorita el
+     * backend devolvía 409 (duplicado), que se mostraba como "Error al
+     * guardar" sin dar a entender qué pasó ni permitir sacarla desde acá.
+     */
+    @Nullable
+    private Integer favoriteIdActual;
 
     private final PhotoGalleryAdapter galleryAdapter = new PhotoGalleryAdapter();
     private final QuestionAdapter questionAdapter = new QuestionAdapter();
@@ -257,6 +268,30 @@ public class PublicationDetailFragment extends Fragment {
                 return;
             }
 
+            if (favoriteIdActual != null) {
+                int idABorrar = favoriteIdActual;
+                apiService.deleteFavorite(idABorrar).enqueue(new Callback<SimpleResponse>() {
+                    @Override
+                    public void onResponse(@NonNull Call<SimpleResponse> call, @NonNull Response<SimpleResponse> response) {
+                        if (!isAdded()) return;
+                        if (response.isSuccessful()) {
+                            favoriteIdActual = null;
+                            actualizarBotonFavorito();
+                            Toast.makeText(requireContext(), "Quitado de favoritos", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(requireContext(), "Error al quitar de favoritos", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<SimpleResponse> call, @NonNull Throwable t) {
+                        if (!isAdded()) return;
+                        Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+                return;
+            }
+
             Favorite favorite = new Favorite();
             favorite.setUserId(userId);
             favorite.setPublicationId(publicacion.getId());
@@ -266,9 +301,17 @@ public class PublicationDetailFragment extends Fragment {
                 @Override
                 public void onResponse(@NonNull Call<Favorite> call, @NonNull Response<Favorite> response) {
                     if (!isAdded()) return;
-                    Toast.makeText(requireContext(),
-                            response.isSuccessful() ? "¡Agregado a favoritos!" : "Error al guardar",
-                            Toast.LENGTH_SHORT).show();
+                    if (response.isSuccessful() && response.body() != null) {
+                        favoriteIdActual = response.body().getId();
+                        actualizarBotonFavorito();
+                        Toast.makeText(requireContext(), "¡Agregado a favoritos!", Toast.LENGTH_SHORT).show();
+                    } else if (response.code() == 409) {
+                        // Ya era favorita (agregada desde el Home, por ejemplo): se
+                        // refresca el estado real en vez de mostrar un error confuso.
+                        cargarEstadoFavorito();
+                    } else {
+                        Toast.makeText(requireContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
+                    }
                 }
 
                 @Override
@@ -278,6 +321,49 @@ public class PublicationDetailFragment extends Fragment {
                 }
             });
         });
+    }
+
+    /**
+     * Trae los favoritos del usuario y fija {@link #favoriteIdActual} según si
+     * esta publicación está entre ellos, para que el botón sepa qué mostrar y
+     * qué hacer. Sin conexión no tiene sentido pedirlo (el botón ya queda
+     * bloqueado por {@link #exigirConexion()} igual).
+     */
+    private void cargarEstadoFavorito() {
+        if (!connectivityWatcher.hayConexion() || publicacion == null) return;
+
+        final int idPublicacionActual = publicacion.getId();
+        apiService.getFavorites().enqueue(new Callback<FavoriteResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<FavoriteResponse> call, @NonNull Response<FavoriteResponse> response) {
+                if (!isAdded() || publicacion == null || publicacion.getId() != idPublicacionActual) return;
+
+                favoriteIdActual = null;
+                if (response.isSuccessful() && response.body() != null && response.body().getData() != null) {
+                    for (Favorite favorito : response.body().getData()) {
+                        if (favorito.getPublicationId() == idPublicacionActual) {
+                            favoriteIdActual = favorito.getId();
+                            break;
+                        }
+                    }
+                }
+                actualizarBotonFavorito();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<FavoriteResponse> call, @NonNull Throwable t) {
+                // Silencioso: no tener el estado de favorito no bloquea el detalle,
+                // el botón se queda mostrando "Favorito" (agregar) por defecto.
+            }
+        });
+    }
+
+    /** Refleja en el botón si esta publicación ya es favorita o no. */
+    private void actualizarBotonFavorito() {
+        if (btnFavoriteDetail == null) return;
+        btnFavoriteDetail.setText(favoriteIdActual != null
+                ? R.string.detail_favorite_remove
+                : R.string.detail_favorite);
     }
 
     // ==========================================
@@ -313,6 +399,7 @@ public class PublicationDetailFragment extends Fragment {
                     cargarOfertas();
                 } else {
                     cargarMiOferta();
+                    cargarEstadoFavorito();
                 }
             }
 

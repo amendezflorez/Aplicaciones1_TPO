@@ -30,7 +30,9 @@ import com.example.rondaapp.data.local.OfflineCache;
 import com.example.rondaapp.data.model.Publication;
 import com.example.rondaapp.data.model.PublicationResponse;
 import com.example.rondaapp.data.model.Favorite;
+import com.example.rondaapp.data.model.FavoriteResponse;
 import com.example.rondaapp.data.model.SavedSearch;
+import com.example.rondaapp.data.model.SimpleResponse;
 import com.example.rondaapp.data.network.ApiService;
 import com.example.rondaapp.session.SessionManager;
 import com.example.rondaapp.ui.detail.PublicationDetailFragment;
@@ -38,7 +40,9 @@ import com.example.rondaapp.ui.detail.PublicationDetailFragment;
 import dagger.hilt.android.AndroidEntryPoint;
 import javax.inject.Inject;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -82,6 +86,12 @@ public class HomeFragment extends Fragment {
     private ConnectivityWatcher connectivityWatcher;
     /** Se está mostrando el listado cacheado en vez del del servidor. */
     private boolean mostrandoCache = false;
+    /**
+     * Id de publicación → id de la fila de favorito, para poder togglear la
+     * estrella del listado (Punto 10/11): sin esto no había forma de saber
+     * qué favorito borrar al des-marcar desde el Home.
+     */
+    private final Map<Integer, Integer> favoritoIdPorPublicacion = new HashMap<>();
 
     // Estados de búsqueda y filtros
     private String currentSearch = null;
@@ -228,11 +238,37 @@ public class HomeFragment extends Fragment {
             Navigation.findNavController(view).navigate(R.id.action_home_to_detail, args);
         });
 
-        adapter.setActionListener((publication, isFavorite) -> {
+        adapter.setActionListener((publication, esFavoritoActualmente) -> {
             if (!exigirConexion()) return;
             String userId = sessionManager.getUserId();
             if (userId == null) {
                 Toast.makeText(requireContext(), "Sesión expirada", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (esFavoritoActualmente) {
+                Integer favoriteId = favoritoIdPorPublicacion.get(publication.getId());
+                if (favoriteId == null) return; // Estado inconsistente: nada para borrar.
+
+                apiService.deleteFavorite(favoriteId).enqueue(new Callback<SimpleResponse>() {
+                    @Override
+                    public void onResponse(@NonNull Call<SimpleResponse> call, @NonNull Response<SimpleResponse> response) {
+                        if (!isAdded()) return;
+                        if (response.isSuccessful()) {
+                            favoritoIdPorPublicacion.remove(publication.getId());
+                            adapter.setFavoritos(favoritoIdPorPublicacion.keySet());
+                            Toast.makeText(requireContext(), "Quitado de favoritos", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(requireContext(), "Error al quitar de favoritos", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<SimpleResponse> call, @NonNull Throwable t) {
+                        if (!isAdded()) return;
+                        Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
                 return;
             }
 
@@ -244,8 +280,15 @@ public class HomeFragment extends Fragment {
             apiService.addFavorite(favorite).enqueue(new Callback<Favorite>() {
                 @Override
                 public void onResponse(@NonNull Call<Favorite> call, @NonNull Response<Favorite> response) {
-                    if (response.isSuccessful()) {
+                    if (!isAdded()) return;
+                    if (response.isSuccessful() && response.body() != null) {
+                        favoritoIdPorPublicacion.put(publication.getId(), response.body().getId());
+                        adapter.setFavoritos(favoritoIdPorPublicacion.keySet());
                         Toast.makeText(requireContext(), "¡Agregado a favoritos!", Toast.LENGTH_SHORT).show();
+                    } else if (response.code() == 409) {
+                        // Ya era favorito (por ejemplo, agregado desde otra pantalla):
+                        // se refresca el estado en vez de mostrar un error confuso.
+                        cargarFavoritos();
                     } else {
                         Toast.makeText(requireContext(), "Error al guardar", Toast.LENGTH_SHORT).show();
                     }
@@ -253,6 +296,7 @@ public class HomeFragment extends Fragment {
 
                 @Override
                 public void onFailure(@NonNull Call<Favorite> call, @NonNull Throwable t) {
+                    if (!isAdded()) return;
                     Toast.makeText(requireContext(), "Error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
@@ -270,6 +314,45 @@ public class HomeFragment extends Fragment {
 
         observarConectividad();
         fetchPublications(true);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Cubre tanto la primera entrada (onResume sigue a onViewCreated) como
+        // volver de otra pantalla (el Detalle, "Mis favoritos") donde se pudo
+        // haber favoriteado o sacado algo: la estrella del listado tiene que
+        // reflejar el estado real, no el que tenía al entrar.
+        cargarFavoritos();
+    }
+
+    /**
+     * Trae los favoritos del usuario para que el listado sepa qué estrellas
+     * pintar llenas. Sin conexión no tiene sentido pedirlo: se deja el último
+     * estado conocido en vez de mostrar un error.
+     */
+    private void cargarFavoritos() {
+        if (connectivityWatcher == null || !connectivityWatcher.hayConexion()) return;
+
+        apiService.getFavorites().enqueue(new Callback<FavoriteResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<FavoriteResponse> call, @NonNull Response<FavoriteResponse> response) {
+                if (!isAdded() || adapter == null) return;
+                if (response.isSuccessful() && response.body() != null && response.body().getData() != null) {
+                    favoritoIdPorPublicacion.clear();
+                    for (Favorite favorito : response.body().getData()) {
+                        favoritoIdPorPublicacion.put(favorito.getPublicationId(), favorito.getId());
+                    }
+                    adapter.setFavoritos(favoritoIdPorPublicacion.keySet());
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<FavoriteResponse> call, @NonNull Throwable t) {
+                // Silencioso: no tener el estado de favoritos no bloquea el Home,
+                // solo hace que las estrellas queden como estaban.
+            }
+        });
     }
 
     /**
