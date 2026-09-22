@@ -61,6 +61,7 @@
     <string name="error_session_expired">Sesión expirada</string>
     <string name="publication_seller">Vendedor: %1$s</string>
     <string name="detail_favorite">☆ Favorito</string>
+    <string name="detail_favorite_remove">★ Quitar de favoritos</string>
     <string name="price_dropped">▼ Bajó de $%1$.2f a $%2$.2f</string>
     <string name="price_increased">▲ Subió de $%1$.2f a $%2$.2f</string>
     <string name="home_favorites">Mis favoritos</string>

@@ -10,8 +10,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rondaapp.R;
 import com.example.rondaapp.data.model.Publication;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.PublicationViewHolder> {
 
@@ -35,6 +38,13 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
     private OnPublicationClickListener publicationClickListener;
     private OnPublicationActionListener actionListener;
 
+    /**
+     * Ids de publicaciones que ya son favoritas del usuario. Sin esto, el
+     * botón de favorito no tenía forma de saber su propio estado: siempre
+     * mandaba "agregar", nunca "quitar" (Punto 10/11).
+     */
+    private Set<Integer> favoritos = Collections.emptySet();
+
     public void setOnSellerClickListener(OnSellerClickListener listener) {
         this.sellerClickListener = listener;
     }
@@ -45,6 +55,14 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
 
     public void setActionListener(OnPublicationActionListener listener) {
         this.actionListener = listener;
+    }
+
+    /** Actualiza qué publicaciones están favoriteadas y redibuja los íconos. */
+    public void setFavoritos(Set<Integer> idsDePublicacionesFavoritas) {
+        this.favoritos = (idsDePublicacionesFavoritas != null)
+                ? new HashSet<>(idsDePublicacionesFavoritas)
+                : Collections.emptySet();
+        notifyDataSetChanged();
     }
 
     public void setPublications(List<Publication> publications) {
@@ -97,10 +115,16 @@ public class PublicationAdapter extends RecyclerView.Adapter<PublicationAdapter.
 
         bindVendedor(holder, pub);
 
-        // Botón de favorito (Punto 11)
+        // Botón de favorito (Punto 10/11): la estrella refleja el estado actual
+        // (vacía si no es favorito, llena si lo es) y el click avisa cuál de
+        // los dos casos es, para que quien escuche decida entre agregar o quitar.
+        boolean esFavorito = favoritos.contains(pub.getId());
+        holder.btnFavorite.setImageResource(esFavorito
+                ? android.R.drawable.btn_star_big_on
+                : android.R.drawable.btn_star_big_off);
         holder.btnFavorite.setOnClickListener(v -> {
             if (actionListener != null) {
-                actionListener.onFavoriteClicked(pub, true);
+                actionListener.onFavoriteClicked(pub, esFavorito);
             }
         });
     }
